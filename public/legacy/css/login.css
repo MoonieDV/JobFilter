@@ -1,0 +1,112 @@
+:root {
+  --brand: #0d6efd;
+}
+
+/* ✅ Scrollbar + Overflow Fix */
+html, body {
+  overflow-x: hidden;    /* Prevent horizontal scroll */
+  overflow-y: overlay;   /* Keep scroll functional but hide scrollbar */
+  scrollbar-width: none; /* Hide scrollbar for Firefox */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none; /* Hide scrollbar for Chrome, Safari, Edge, Opera */
+}
+
+/* Wrapper for login content */
+.login-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Background setup */
+body {
+  background-image: url("https://i.pinimg.com/1200x/1c/04/a6/1c04a60d934b7c61ad214c33627d0f1f.jpg");
+  background-size: cover;
+  background-position: center;
+  height: 100vh;             /* ✅ Changed from min-height to height to prevent vertical overflow */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+
+/* Background overlay blur */
+.bg-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backdrop-filter: blur(2px); 
+  background: linear-gradient(
+    rgba(36, 83, 237, 0.909),
+    rgba(80, 9, 180, 0.822)
+  );
+  z-index: -1;
+}
+
+/* Login card container */
+.login-card {
+  width: 150%;
+  max-width: 500px;
+  border: 0;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: rgba(161, 224, 239, 0.427);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.852);
+  margin-top: 1rem;
+}
+
+/* Logo banner image */
+.brand-banner {
+  width: 300px;
+  height: auto;
+  object-fit: contain;
+  margin-right: 8px;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+}
+
+/* Forgot password link */
+.forgot-password {
+  color: #000;
+  text-decoration: underline;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.forgot-password:hover {
+  color: #333;
+}
+
+/* Registration link */
+.registration {
+  color: #000;
+  text-decoration: underline;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.registration:hover {
+  color: #333;
+}
+
+/* Gradient primary button */
+.btn-primary {
+  background: linear-gradient(135deg, #0536cb, #38a5e9);
+  border: none;
+  box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.05);
+}
+
+/* Responsive fix */
+@media (min-width: 768px) {
+  .login-card {
+    max-width: 420px;
+  }
+}
