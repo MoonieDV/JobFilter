@@ -48,21 +48,31 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Check if current page is allowed for user role
     function checkPageAccess() {
-        const currentFile = window.location.pathname.split('/').pop();
+        const currentPath = window.location.pathname;
+        const currentFile = currentPath.split('/').pop();
         const allowedPages = rolePermissions[userRole] || [];
         const isAllowed = allowedPages.includes('*') || allowedPages.includes(currentFile);
         
-        // Public pages that don't require role checks
+        // Public pages that don't require role checks (including Laravel routes)
         const publicPages = ['login.php', 'Registration.php', 'landing.php', 'about.php', 'contact.php', 'index.php', 'dashboard.php'];
+        const publicRoutes = ['/', '/about', '/contact', '/dashboard', '/profile', '/jobs', '/employer/jobs', '/applications', '/resumes'];
         
-        // Allow access to dashboard for all authenticated users
-        if (currentFile === 'dashboard.php') {
-            return; // Allow access to dashboard
+        // Check if current path matches any public route
+        const isPublicRoute = publicRoutes.some(route => currentPath === route || currentPath.startsWith(route + '/'));
+        
+        // Allow access to dashboard and profile for all authenticated users
+        if (currentFile === 'dashboard.php' || currentPath === '/dashboard' || currentPath === '/profile' || isPublicRoute) {
+            return; // Allow access
+        }
+        
+        // Skip check for Laravel routes (they have their own middleware)
+        if (!currentFile.includes('.php') && currentPath.startsWith('/')) {
+            return; // Laravel handles route authorization via middleware
         }
         
         if (!publicPages.includes(currentFile) && !isAllowed) {
             alert('Access denied for your role. Please sign in with the correct account.');
-            window.location.href = 'login.php';
+            window.location.href = '/login';
         }
     }
     

@@ -18,7 +18,7 @@ class JobController extends Controller
             ->latest()
             ->paginate(10);
 
-        return view('employer.jobs.index', compact('jobs'));
+        return view('legacy.employer-jobs', compact('jobs'));
     }
 
     public function create()
