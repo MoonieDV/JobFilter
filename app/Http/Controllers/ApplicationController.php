@@ -26,6 +26,47 @@ class ApplicationController extends Controller
         return view('applications.index', compact('applications'));
     }
 
+    public function show(Request $request, Application $application)
+    {
+        $user = $request->user();
+
+        // Authorization: employer can view their own job's applications, applicant can view their own applications
+        if ($user->role === 'employer') {
+            if ($application->employer_id !== $user->id) {
+                abort(403, 'Unauthorized');
+            }
+        } else {
+            if ($application->applicant_id !== $user->id) {
+                abort(403, 'Unauthorized');
+            }
+        }
+
+        $application->load(['job', 'applicant']);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'application' => [
+                    'id' => $application->id,
+                    'job_id' => $application->job_id,
+                    'job_title' => $application->job?->title,
+                    'full_name' => $application->full_name,
+                    'applicant_name' => $application->applicant?->name,
+                    'email' => $application->email,
+                    'applicant_email' => $application->applicant?->email,
+                    'phone' => $application->phone,
+                    'applicant_phone' => $application->applicant?->phone,
+                    'location' => $application->location,
+                    'resume_path' => $application->resume_path,
+                    'cover_letter' => $application->cover_letter,
+                    'status' => $application->status,
+                    'applied_at' => $application->applied_at,
+                ],
+            ]);
+        }
+
+        return view('applications.show', compact('application'));
+    }
+
     public function store(Request $request, ?Job $job = null, SkillExtractionService $skillExtractor = null)
     {
         if ($skillExtractor === null) {

@@ -26,6 +26,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::get('/applications', [ApplicationController::class, 'index'])->name('applications.index');
+    Route::get('/applications/{application}', [ApplicationController::class, 'show'])->name('applications.show');
     Route::post('/applications', [ApplicationController::class, 'store'])->name('applications.store');
     Route::put('/applications/{application}', [ApplicationController::class, 'update'])->name('applications.update');
     Route::post('/jobs/{job}/apply', [ApplicationController::class, 'store'])->name('jobs.apply');

@@ -331,25 +331,110 @@
                                 </thead>
                                 <tbody>
                                     @forelse ($employerJobs as $job)
-                                        <tr>
-                                            <td>{{ $job->title }}</td>
+                                        @php
+                                            $applicants = $job->applications ?? collect();
+                                            $appCount = $job->applications_count ?? $applicants->count();
+                                            $collapseId = 'jobApplicants' . $job->id;
+                                        @endphp
+                                        <tr class="job-row" data-job-id="{{ $job->id }}">
+                                            <td>
+                                                <a href="#{{ $collapseId }}" class="text-dark fw-semibold text-decoration-none d-inline-flex align-items-center" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="{{ $collapseId }}">
+                                                    {{ $job->title }}
+                                                    <i class="bi bi-chevron-down ms-2 small"></i>
+                                                </a>
+                                                <div class="text-muted small">{{ $appCount }} Applicant{{ $appCount === 1 ? '' : 's' }}</div>
+                                            </td>
                                             <td>{{ $job->company_name }}</td>
                                             <td>{{ optional($job->created_at)->format('M j, Y') }}</td>
                                             <td>
-                                                <div class="d-flex flex-column gap-2">
-                                                    <span class="badge bg-primary">{{ $job->applications_count }} Applicants</span>
-                                                    @foreach ($job->applications->take(3) as $application)
-                                                        <div class="d-flex align-items-center gap-2">
-                                                            <div class="applicant-avatar">{{ Str::of($application->applicant?->name)->substr(0, 2)->upper() }}</div>
-                                                            <div>
-                                                                <strong>{{ $application->applicant?->name }}</strong>
-                                                                <div class="text-muted small">{{ optional($application->applied_at)->diffForHumans() }}</div>
+                            @php
+                                $editRouteExists = Route::has('employer.jobs.edit');
+                            @endphp
+                                                <div class="d-flex flex-wrap gap-2">
+                                                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#{{ $collapseId }}" aria-expanded="false" aria-controls="{{ $collapseId }}">
+                                                        <i class="bi bi-people me-1"></i>View Applicants ({{ $appCount }})
+                                                    </button>
+                                                    @if ($editRouteExists)
+                                                        <a href="{{ route('employer.jobs.edit', $job) }}" class="btn btn-sm btn-outline-secondary">
+                                                            <i class="bi bi-pencil-square me-1"></i>Edit
+                                                        </a>
+                                                    @endif
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr class="collapse" id="{{ $collapseId }}">
+                                            <td colspan="4" class="p-0">
+                                                <div class="p-3 bg-light border-top">
+                                                    <h6 class="mb-3">
+                                                        <i class="bi bi-people-fill me-2"></i>{{ $appCount }} Applicant{{ $appCount === 1 ? '' : 's' }} for {{ $job->title }}
+                                                    </h6>
+                                                    @forelse ($applicants as $application)
+                                                        @php
+                                                            $applicantName = $application->applicant?->name ?? $application->full_name ?? 'Applicant';
+                                                            $initials = collect(explode(' ', $applicantName))
+                                                                ->filter()
+                                                                ->map(fn ($segment) => mb_substr($segment, 0, 1))
+                                                                ->take(2)
+                                                                ->implode('') ?: 'AP';
+                                                            $email = $application->applicant?->email ?? $application->email;
+                                                            $phone = $application->applicant?->phone ?? $application->phone;
+                                                            $status = Str::of($application->status ?? 'Pending')->title();
+                                                            $statusKey = Str::of($application->status ?? 'pending')->lower();
+                                                            $badgeClass = match ($statusKey) {
+                                                                'hired' => 'success',
+                                                                'rejected' => 'danger',
+                                                                'under review' => 'info',
+                                                                'interview' => 'primary',
+                                                                default => 'warning',
+                                                            };
+                                                            $datePrefix = $statusKey === 'hired' ? 'Hired on ' : 'Applied on ';
+                                                            $dateLabel = $datePrefix . (optional($application->applied_at)->format('M j, Y') ?? '—');
+                                                        @endphp
+                                                        <div class="applicant-card">
+                                                            <div class="card-body">
+                                                                <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                                                                    <div class="d-flex align-items-start">
+                                                                        <div class="applicant-avatar">{{ Str::upper($initials) }}</div>
+                                                                        <div class="applicant-info">
+                                                                            <h6 class="mb-1">{{ $applicantName }}</h6>
+                                                                            <div class="applicant-meta">
+                                                                                @if ($email)
+                                                                                    <div><i class="bi bi-envelope"></i>{{ $email }}</div>
+                                                                                @endif
+                                                                                @if ($phone)
+                                                                                    <div><i class="bi bi-telephone"></i>{{ $phone }}</div>
+                                                                                @endif
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="applicant-actions text-end">
+                                                                        <span class="badge bg-{{ $badgeClass }}{{ $badgeClass === 'warning' ? ' text-dark' : '' }}">{{ $status }}</span>
+                                                                        <div class="text-muted small">{{ $dateLabel }}</div>
+                                                                        <div class="d-flex flex-wrap gap-1 justify-content-end">
+                                                                            @if ($application->applicant_id)
+                                                                                <a href="{{ route('resumes.show', $application->applicant_id) }}" class="btn btn-sm btn-outline-primary">
+                                                                                    <i class="bi bi-person-lines-fill me-1"></i>Profile
+                                                                                </a>
+                                                                            @endif
+                                                                            <button type="button" class="btn btn-sm btn-outline-secondary btn-view-app-form" data-app-id="{{ $application->id }}" data-job-id="{{ $job->id }}" data-job-title="{{ $job->title }}">
+                                                                                <i class="bi bi-file-earmark-text me-1"></i>View Application
+                                                                            </button>
+                                                                            <button type="button" class="btn btn-sm btn-primary">
+                                                                                <i class="bi bi-calendar-plus me-1"></i>Interview
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    @endforeach
-                                                    @if ($job->applications_count > 3)
-                                                        <a href="{{ route('applications.index') }}?job={{ $job->id }}" class="small">View all</a>
-                                                    @endif
+                                                    @empty
+                                                        <div class="text-muted">No applicants yet.</div>
+                                                    @endforelse
+                                                    <div class="mt-3 text-end">
+                                                        <a href="{{ route('applications.index', ['job' => $job->id]) }}" class="btn btn-sm btn-outline-primary">
+                                                            <i class="bi bi-box-arrow-up-right me-1"></i>View All Applications
+                                                        </a>
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
@@ -633,6 +718,97 @@
                     updateResumePreview(currentResume, savedResume);
                 });
             }
+
+            // Handler for employer viewing application form
+            document.querySelectorAll('.btn-view-app-form').forEach(btn => {
+                btn.addEventListener('click', async function (e) {
+                    e.preventDefault();
+                    const appId = btn.dataset.appId || '';
+                    const jobTitle = btn.dataset.jobTitle || '';
+                    
+                    if (!appId) {
+                        alert('Missing application ID');
+                        return;
+                    }
+
+                    try {
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
+                        const response = await fetch('/applications/' + appId, {
+                            method: 'GET',
+                            headers: {
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Accept': 'application/json',
+                            },
+                        });
+
+                        if (!response.ok) {
+                            alert('Failed to load application');
+                            return;
+                        }
+
+                        const data = await response.json();
+                        const app = data.application || data;
+
+                        // Populate modal fields
+                        document.getElementById('modalJobTitle').textContent = jobTitle || app.job_title || '';
+                        document.getElementById('modalFullName').value = app.full_name || app.applicant_name || '';
+                        document.getElementById('modalEmail').value = app.email || app.applicant_email || '';
+                        document.getElementById('modalPhone').value = app.phone || app.applicant_phone || '';
+                        document.getElementById('modalLocation').value = app.location || '';
+                        document.getElementById('modalCover').value = app.cover_letter || '';
+
+                        // Update resume area
+                        const resumeArea = document.getElementById('modalResumeArea');
+                        resumeArea.innerHTML = '';
+                        
+                        if (app.resume_path) {
+                            const resumeUrl = getResumeUrl(app.resume_path);
+                            const link = document.createElement('a');
+                            link.href = resumeUrl;
+                            link.target = '_blank';
+                            link.textContent = 'Open resume';
+                            link.className = 'btn btn-sm btn-outline-primary';
+                            resumeArea.appendChild(link);
+
+                            if (resumeUrl.toLowerCase().endsWith('.pdf')) {
+                                const iframe = document.createElement('iframe');
+                                iframe.src = resumeUrl;
+                                iframe.style.width = '100%';
+                                iframe.style.height = '400px';
+                                iframe.className = 'mt-2 border';
+                                resumeArea.appendChild(iframe);
+                            }
+                        } else {
+                            resumeArea.innerHTML = '<p class="small text-muted">No resume uploaded.</p>';
+                        }
+
+                        // Set modal to read-only for employer view
+                        document.getElementById('modalFullName').readOnly = true;
+                        document.getElementById('modalEmail').readOnly = true;
+                        document.getElementById('modalPhone').readOnly = true;
+                        document.getElementById('modalLocation').readOnly = true;
+                        document.getElementById('modalCover').readOnly = true;
+
+                        // Hide edit controls for employer view
+                        const useSavedWrap = document.getElementById('useSavedResumeWrap');
+                        const resumeFileWrap = document.getElementById('modalResumeFileWrap');
+                        const modalSubmitBtn = document.getElementById('modalSubmitBtn');
+                        
+                        if (useSavedWrap) useSavedWrap.style.display = 'none';
+                        if (resumeFileWrap) resumeFileWrap.style.display = 'none';
+                        if (modalSubmitBtn) modalSubmitBtn.style.display = 'none';
+
+                        // Store application ID for reference
+                        applicationModalEl.dataset.currentApplicationId = appId;
+                        applicationModalEl.dataset.currentAppResume = app.resume_path || '';
+
+                        applicationModal.show();
+                    } catch (error) {
+                        console.error('Error loading application:', error);
+                        alert('Error loading application form');
+                    }
+                });
+            });
 
             document.querySelectorAll('.view-application-btn').forEach(btn => {
                 btn.addEventListener('click', function (e) {
