@@ -8,6 +8,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Find Jobs - JobFilter</title>
     <link rel="icon" type="image/svg+xml" href="{{ asset('legacy/Images/log.png') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -200,10 +201,7 @@
                                     <div class="d-flex flex-column align-items-end gap-2">
                                         @auth
                                             @if (! $alreadyApplied)
-                                                <form method="POST" action="{{ route('jobs.apply', $job) }}">
-                                                    @csrf
-                                                    <button type="submit" class="btn btn-primary">Apply Now</button>
-                                                </form>
+                                                <button type="button" class="btn btn-primary btn-apply-job" data-job-id="{{ $job->id }}" data-job-title="{{ e($job->title) }}" data-company="{{ e($job->company_name) }}">Apply Now</button>
                                             @else
                                                 <span class="badge bg-success">Applied</span>
                                             @endif
@@ -302,9 +300,328 @@
         </div>
     </footer>
 
+    <!-- Application Modal (for new applications from job listing) -->
+    <div class="modal fade" id="applicationModal" tabindex="-1" aria-labelledby="applicationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="applicationModalLabel">Apply for <span id="modalJobTitle"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="applicationPreviewForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" id="modalFullName" class="form-control" value="{{ auth()->user()->name ?? '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email</label>
+                                <input type="text" id="modalEmail" class="form-control" value="{{ auth()->user()->email ?? '' }}">
+                            </div>
+                            <div class="col-md-6 mt-2">
+                                <label class="form-label">Phone</label>
+                                <input type="text" id="modalPhone" class="form-control">
+                            </div>
+                            <div class="col-md-6 mt-2">
+                                <label class="form-label">Location</label>
+                                <input type="text" id="modalLocation" class="form-control">
+                            </div>
+                            <div class="col-12 mt-3">
+                                <label class="form-label">Resume <small class="text-muted">(PDF, DOC, DOCX, max 5MB)</small></label>
+
+                                <div class="mt-2 small" id="modalCurrentResumeWrap">Current resume: <a id="modalCurrentResumeLink" href="#" target="_blank">-</a></div>
+
+                                <div id="modalResumeArea" class="mt-2">
+                                    <p class="small text-muted">No resume uploaded.</p>
+                                </div>
+
+                                <div class="form-check mt-3" id="useSavedResumeWrap" style="display:none;">
+                                    <input class="form-check-input" type="checkbox" id="useSavedResumeCheckbox">
+                                    <label class="form-check-label small" for="useSavedResumeCheckbox">Use my saved resume</label>
+                                </div>
+
+                                <div class="mt-2 small text-muted" id="modalSavedFilenameWrap" style="display:none;">Saved: <span id="modalSavedFilename"></span></div>
+
+                                <div class="mt-3" id="modalResumeFileWrap">
+                                    <label class="form-label small">Choose File</label>
+                                    <input type="file" id="modalResumeFile" class="form-control form-control-sm" accept=".pdf,.doc,.docx">
+                                </div>
+
+                                <div class="form-text small text-muted mt-2">Preview is shown for PDF files only.</div>
+                            </div>
+                            <div class="col-12 mt-3">
+                                <label class="form-label">Cover Letter</label>
+                                <textarea id="modalCover" class="form-control" rows="5"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="modalSubmitBtn">SUBMIT APPLICATION</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // User's saved resume path (if any)
+        const userSavedResumePath = `{{ auth()->user()->resume_path ?? '' }}`;
+
+        const applicationModalEl = document.getElementById('applicationModal');
+        const applicationModal = new bootstrap.Modal(applicationModalEl);
+
+        // Helper function to construct proper resume URL
+        function getResumeUrl(resumePath) {
+            if (!resumePath) return '';
+            
+            // If already has /storage or http, return as-is
+            if (resumePath.startsWith('/storage') || resumePath.startsWith('http')) {
+                return resumePath;
+            }
+            
+            // If it's just a filename, prepend /storage/resumes/
+            if (!resumePath.includes('/')) {
+                return '/storage/resumes/' + resumePath;
+            }
+            
+            // If it starts with resumes/, prepend /storage/
+            if (resumePath.startsWith('resumes/')) {
+                return '/storage/' + resumePath;
+            }
+            
+            // Otherwise prepend /storage/ to the path, removing leading slash if present
+            return '/storage/' + (resumePath.startsWith('/') ? resumePath.slice(1) : resumePath);
+        }
+
+        // Helper function to update file input state based on checkbox
+        function updateResumeFileState(isUsingSaved) {
+            const fileInput = document.getElementById('modalResumeFile');
+            const fileWrap = document.getElementById('modalResumeFileWrap');
+            
+            if (isUsingSaved) {
+                fileInput.disabled = true;
+                fileWrap.style.opacity = '0.5';
+                fileWrap.style.pointerEvents = 'none';
+                fileInput.value = '';
+            } else {
+                fileInput.disabled = false;
+                fileWrap.style.opacity = '1';
+                fileWrap.style.pointerEvents = 'auto';
+            }
+        }
+
+        // Helper function to update resume preview area
+        function updateResumePreview() {
+            const useSavedCheckbox = document.getElementById('useSavedResumeCheckbox');
+            const fileInput = document.getElementById('modalResumeFile');
+            const resumeArea = document.getElementById('modalResumeArea');
+
+            if (useSavedCheckbox?.checked && userSavedResumePath) {
+                // Show saved resume preview
+                resumeArea.innerHTML = '';
+                const link = document.createElement('a');
+                const resumeUrl = getResumeUrl(userSavedResumePath);
+                link.href = resumeUrl;
+                link.target = '_blank';
+                link.textContent = 'Open saved resume';
+                link.className = 'btn btn-sm btn-outline-primary';
+                resumeArea.appendChild(link);
+
+                // Add PDF preview if it's a PDF
+                if (resumeUrl.toLowerCase().endsWith('.pdf')) {
+                    const container = document.createElement('div');
+                    container.className = 'mt-2 border position-relative';
+                    container.style.minHeight = '300px';
+                    container.style.backgroundColor = '#f8f9fa';
+                    
+                    const iframe = document.createElement('iframe');
+                    iframe.src = resumeUrl;
+                    iframe.style.width = '100%';
+                    iframe.style.height = '300px';
+                    iframe.style.border = 'none';
+                    
+                    iframe.onerror = function() {
+                        container.innerHTML = '<div style="padding: 20px; text-align: center; color: #dc3545;">Unable to load PDF preview. <a href="' + resumeUrl + '" target="_blank">Click here to open</a></div>';
+                    };
+                    
+                    container.appendChild(iframe);
+                    resumeArea.appendChild(container);
+                }
+            } else if (fileInput?.files?.length > 0) {
+                // Show newly selected file preview
+                const file = fileInput.files[0];
+                resumeArea.innerHTML = '<p class="small text-muted">Selected: <strong>' + file.name + '</strong> (' + (file.size / 1024).toFixed(2) + ' KB)</p>';
+            } else {
+                // No resume selected
+                resumeArea.innerHTML = '<p class="small text-muted">No resume selected.</p>';
+            }
+        }
+
+        // Handle "Apply Now" button click
+        document.querySelectorAll('.btn-apply-job').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const jobId = btn.dataset.jobId || '';
+                const jobTitle = btn.dataset.jobTitle || '';
+                const company = btn.dataset.company || '';
+
+                // Reset form
+                document.getElementById('modalFullName').value = `{{ auth()->user()->name ?? '' }}`;
+                document.getElementById('modalEmail').value = `{{ auth()->user()->email ?? '' }}`;
+                document.getElementById('modalPhone').value = '';
+                document.getElementById('modalLocation').value = '';
+                document.getElementById('modalCover').value = '';
+                document.getElementById('modalResumeFile').value = '';
+
+                // Populate job info
+                document.getElementById('modalJobTitle').textContent = jobTitle;
+
+                // Set dataset for submission
+                applicationModalEl.dataset.currentJobId = jobId;
+                applicationModalEl.dataset.currentApplicationId = ''; // new application
+                applicationModalEl.dataset.currentSavedResume = userSavedResumePath;
+
+                // Show/hide checkbox if user has saved resume
+                const useSavedWrap = document.getElementById('useSavedResumeWrap');
+                const useSavedCheckbox = document.getElementById('useSavedResumeCheckbox');
+                const modalSavedFilenameWrap = document.getElementById('modalSavedFilenameWrap');
+                const modalSavedFilename = document.getElementById('modalSavedFilename');
+
+                if (userSavedResumePath) {
+                    useSavedWrap.style.display = 'block';
+                    modalSavedFilenameWrap.style.display = 'block';
+                    const filename = userSavedResumePath.split('/').pop();
+                    modalSavedFilename.textContent = filename;
+                    useSavedCheckbox.checked = true; // Default to using saved resume
+                } else {
+                    useSavedWrap.style.display = 'none';
+                    modalSavedFilenameWrap.style.display = 'none';
+                    useSavedCheckbox.checked = false;
+                }
+
+                // Update file input state
+                updateResumeFileState(useSavedCheckbox.checked);
+                updateResumePreview();
+
+                applicationModal.show();
+            });
+        });
+
+        // Handle checkbox change
+        const useSavedResumeCheckbox = document.getElementById('useSavedResumeCheckbox');
+        if (useSavedResumeCheckbox) {
+            useSavedResumeCheckbox.addEventListener('change', function() {
+                updateResumeFileState(this.checked);
+                updateResumePreview();
+            });
+        }
+
+        // Handle file input change
+        const modalResumeFile = document.getElementById('modalResumeFile');
+        if (modalResumeFile) {
+            modalResumeFile.addEventListener('change', function() {
+                updateResumePreview();
+            });
+        }
+
+        // Handle SUBMIT APPLICATION button
+        const modalSubmitBtn = document.getElementById('modalSubmitBtn');
+        if (modalSubmitBtn) {
+            modalSubmitBtn.addEventListener('click', async () => {
+                const jobId = applicationModalEl.dataset.currentJobId || '';
+                if (!jobId) {
+                    alert('Missing job id.');
+                    return;
+                }
+
+                const fullname = document.getElementById('modalFullName').value || '';
+                const email = document.getElementById('modalEmail').value || '';
+                const phone = document.getElementById('modalPhone').value || '';
+                const location = document.getElementById('modalLocation').value || '';
+                const cover = document.getElementById('modalCover').value || '';
+
+                if (!cover || cover.trim() === '') {
+                    alert('Cover letter is required.');
+                    return;
+                }
+
+                const useSaved = document.getElementById('useSavedResumeCheckbox')?.checked || false;
+                const fileInput = document.getElementById('modalResumeFile');
+                const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+
+                if (!useSaved && !hasFile) {
+                    alert('Please upload a resume or check "Use my saved resume".');
+                    return;
+                }
+
+                // Show processing state
+                const originalText = modalSubmitBtn.textContent;
+                modalSubmitBtn.textContent = 'Processing...';
+                modalSubmitBtn.disabled = true;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('job_id', jobId);
+                    formData.append('full_name', fullname);
+                    formData.append('email', email);
+                    formData.append('phone', phone);
+                    formData.append('location', location);
+                    formData.append('cover_letter', cover);
+
+                    if (useSaved) {
+                        formData.append('use_saved_resume', '1');
+                    } else if (hasFile) {
+                        formData.append('resume', fileInput.files[0]);
+                    }
+
+                    // Get CSRF token from meta tag or form
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
+
+                    const resp = await fetch('/applications', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken
+                        },
+                        body: formData,
+                    });
+
+                    if (resp.ok) {
+                        try {
+                            const data = await resp.json();
+                            applicationModal.hide();
+                            alert('Application submitted successfully!');
+                            // Reload page to show updated dashboard
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 500);
+                        } catch (e) {
+                            // Response was ok but not JSON, likely a redirect
+                            applicationModal.hide();
+                            alert('Application submitted successfully!');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 500);
+                        }
+                    } else {
+                        const errorText = await resp.text();
+                        console.error('Submit failed:', resp.status, errorText);
+                        console.log('Response headers:', resp.headers);
+                        alert(`Failed to submit application (${resp.status}). Check console for details.`);
+                    }
+                } catch (err) {
+                    console.error('Fetch error:', err);
+                    alert('Error while submitting application: ' + err.message);
+                } finally {
+                    modalSubmitBtn.textContent = originalText;
+                    modalSubmitBtn.disabled = false;
+                }
+            });
+        }
+    </script>
     <script src="{{ asset('legacy/js/common.js') }}"></script>
     <script src="{{ asset('legacy/js/jobs.js') }}"></script>
 </body>
 </html>
-

@@ -13,6 +13,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Dashboard - JobFilter</title>
     <link rel="icon" type="image/svg+xml" href="{{ asset('legacy/Images/log.png') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -154,7 +155,10 @@
                     <div class="col-12 col-lg-8 mb-4">
                         <div class="card h-100">
                             <div class="card-header d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">Your Skills Profile</h5>
+                                <div>
+                                    <h5 class="mb-0">Your Skills Profile</h5>
+                                    <small class="text-muted">Grouped by category</small>
+                                </div>
                                 <button class="btn btn-light btn-sm rounded-pill fw-semibold">+ Add Skill</button>
                             </div>
                             <div class="card-body">
@@ -200,7 +204,7 @@
                         <div class="card">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">Recent Applications</h5>
-                                <a href="{{ route('applications.index') }}" class="btn btn-primary btn-sm">View All</a>
+                                <a href="{{ route('jobs.browse') }}" class="btn btn-primary btn-sm">View All</a>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -212,6 +216,7 @@
                                                 <th>Applied Date</th>
                                                 <th>Status</th>
                                                 <th>Match Score</th>
+                                                <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -232,6 +237,25 @@
                                                     <td>{{ optional($application->applied_at)->format('Y-m-d') }}</td>
                                                     <td><span class="badge bg-secondary">{{ $status }}</span></td>
                                                     <td><span class="badge bg-{{ $scoreColor }}">{{ $score }}%</span></td>
+                                                    <td>
+                                                                          <a href="{{ route('jobs.show', $application->job) }}"
+                                                                              class="btn btn-sm btn-outline-primary view-application-btn"
+                                                                              data-application-id="{{ $application->id }}"
+                                                                              data-fullname="{{ e($application->full_name ?? $application->applicant?->name) }}"
+                                                                              data-email="{{ e($application->email ?? $application->applicant?->email) }}"
+                                                                              data-phone="{{ e($application->phone) }}"
+                                                                              data-location="{{ e($application->location) }}"
+                                                                              data-resume="{{ e($application->resume_path) }}"
+                                                                              data-cover="{{ e($application->cover_letter) }}"
+                                                                              data-jobtitle="{{ e($application->job?->title) }}"
+                                                                              data-saved-resume="{{ e($user->saved_resume_path ?? '') }}"
+                                                                          >View</a>
+                                                        <form action="{{ route('applications.destroy', $application) }}" method="POST" class="d-inline-block ms-2" onsubmit="return confirm('Cancel this application?');">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger">Cancel</button>
+                                                        </form>
+                                                    </td>
                                                 </tr>
                                             @empty
                                                 <tr>
@@ -360,6 +384,71 @@
         </div>
     </footer>
 
+        <!-- Application modal (legacy-like) -->
+        <div class="modal fade" id="applicationModal" tabindex="-1" aria-labelledby="applicationModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="applicationModalLabel">Apply for <span id="modalJobTitle"></span></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="applicationPreviewForm">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Full Name</label>
+                                    <input type="text" id="modalFullName" class="form-control" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email</label>
+                                    <input type="text" id="modalEmail" class="form-control" readonly>
+                                </div>
+                                <div class="col-md-6 mt-2">
+                                    <label class="form-label">Phone</label>
+                                    <input type="text" id="modalPhone" class="form-control" readonly>
+                                </div>
+                                <div class="col-md-6 mt-2">
+                                    <label class="form-label">Location</label>
+                                    <input type="text" id="modalLocation" class="form-control" readonly>
+                                </div>
+                                <div class="col-12 mt-3">
+                                    <label class="form-label">Resume <small class="text-muted">(PDF, DOC, DOCX, max 5MB)</small></label>
+
+                                    <div class="mt-2 small" id="modalCurrentResumeWrap">Current resume for this application: <a id="modalCurrentResumeLink" href="#" target="_blank">-</a></div>
+
+                                    <div id="modalResumeArea" class="mt-2">
+                                        <p class="small text-muted">No resume uploaded.</p>
+                                    </div>
+
+                                    <div class="form-check mt-3" id="useSavedResumeWrap" style="display:none;">
+                                        <input class="form-check-input" type="checkbox" id="useSavedResumeCheckbox">
+                                        <label class="form-check-label small" for="useSavedResumeCheckbox">Use my saved resume</label>
+                                    </div>
+
+                                    <div class="mt-2 small text-muted" id="modalSavedFilenameWrap" style="display:none;">Saved: <span id="modalSavedFilename"></span></div>
+
+                                    <div class="mt-3" id="modalResumeFileWrap" style="display:none;">
+                                        <label class="form-label small">Choose File</label>
+                                        <input type="file" id="modalResumeFile" class="form-control form-control-sm" accept=".pdf,.doc,.docx">
+                                    </div>
+
+                                    <div class="form-text small text-muted mt-2">Preview is shown for PDF files only.</div>
+                                </div>
+                                <div class="col-12 mt-3">
+                                    <label class="form-label">Cover Letter</label>
+                                    <textarea id="modalCover" class="form-control" rows="5" readonly></textarea>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="modalSubmitBtn">SUBMIT APPLICATION</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.querySelectorAll('[data-role-switch]').forEach(btn => {
@@ -400,6 +489,325 @@
         if ('{{ $role }}' === 'employer') {
             document.getElementById('jobSeekerDashboard').classList.add('d-none');
             document.getElementById('employerDashboard').classList.remove('d-none');
+        }
+
+        // Application modal handling (legacy-like)
+        const applicationModalEl = document.getElementById('applicationModal');
+        const applicationModal = applicationModalEl ? new bootstrap.Modal(applicationModalEl) : null;
+
+        if (applicationModalEl) {
+
+            // Helper function to construct proper resume URL
+            function getResumeUrl(resumePath) {
+                if (!resumePath) return '';
+                
+                // If already has /storage or http, return as-is
+                if (resumePath.startsWith('/storage') || resumePath.startsWith('http')) {
+                    return resumePath;
+                }
+                
+                // If it's just a filename, prepend /storage/resumes/
+                if (!resumePath.includes('/')) {
+                    return '/storage/resumes/' + resumePath;
+                }
+                
+                // If it starts with resumes/, prepend /storage/
+                if (resumePath.startsWith('resumes/')) {
+                    return '/storage/' + resumePath;
+                }
+                
+                // Otherwise prepend /storage/ to the path, removing leading slash if present
+                return '/storage/' + (resumePath.startsWith('/') ? resumePath.slice(1) : resumePath);
+            }
+
+            // Helper function to update file input state based on checkbox
+            function updateResumeFileState(isUsingSaved) {
+                const fileInput = document.getElementById('modalResumeFile');
+                const fileWrap = document.getElementById('modalResumeFileWrap');
+                
+                if (isUsingSaved) {
+                    fileInput.disabled = true;
+                    fileWrap.style.opacity = '0.5';
+                    fileWrap.style.pointerEvents = 'none';
+                    fileInput.value = '';
+                } else {
+                    fileInput.disabled = false;
+                    fileWrap.style.opacity = '1';
+                    fileWrap.style.pointerEvents = 'auto';
+                }
+            }
+
+            // Helper function to update resume preview area
+            function updateResumePreview(currentResume, savedResume) {
+                const useSavedCheckbox = document.getElementById('useSavedResumeCheckbox');
+                const fileInput = document.getElementById('modalResumeFile');
+                const resumeArea = document.getElementById('modalResumeArea');
+
+                if (useSavedCheckbox?.checked && savedResume) {
+                    // Show saved resume preview
+                    resumeArea.innerHTML = '';
+                    const link = document.createElement('a');
+                    const resumeUrl = getResumeUrl(savedResume);
+                    link.href = resumeUrl;
+                    link.target = '_blank';
+                    link.textContent = 'Open saved resume';
+                    link.className = 'btn btn-sm btn-outline-primary';
+                    resumeArea.appendChild(link);
+
+                    // Add PDF preview if it's a PDF
+                    if (resumeUrl.toLowerCase().endsWith('.pdf')) {
+                        const container = document.createElement('div');
+                        container.className = 'mt-2 border position-relative';
+                        container.style.minHeight = '300px';
+                        container.style.backgroundColor = '#f8f9fa';
+                        
+                        const iframe = document.createElement('iframe');
+                        iframe.src = resumeUrl;
+                        iframe.style.width = '100%';
+                        iframe.style.height = '300px';
+                        iframe.style.border = 'none';
+                        
+                        iframe.onerror = function() {
+                            container.innerHTML = '<div style="padding: 20px; text-align: center; color: #dc3545;">Unable to load PDF preview. <a href="' + resumeUrl + '" target="_blank">Click here to open</a></div>';
+                        };
+                        
+                        container.appendChild(iframe);
+                        resumeArea.appendChild(container);
+                    }
+                } else if (fileInput?.files?.length > 0) {
+                    // Show newly selected file preview
+                    const file = fileInput.files[0];
+                    resumeArea.innerHTML = '<p class="small text-muted">Selected: <strong>' + file.name + '</strong> (' + (file.size / 1024).toFixed(2) + ' KB)</p>';
+                } else if (currentResume) {
+                    // Show existing application resume
+                    resumeArea.innerHTML = '';
+                    const link = document.createElement('a');
+                    const resumeUrl = getResumeUrl(currentResume);
+                    link.href = resumeUrl;
+                    link.target = '_blank';
+                    link.textContent = 'Open resume';
+                    link.className = 'btn btn-sm btn-outline-primary';
+                    resumeArea.appendChild(link);
+
+                    if (resumeUrl.toLowerCase().endsWith('.pdf')) {
+                        const container = document.createElement('div');
+                        container.className = 'mt-2 border position-relative';
+                        container.style.minHeight = '300px';
+                        container.style.backgroundColor = '#f8f9fa';
+                        
+                        const iframe = document.createElement('iframe');
+                        iframe.src = resumeUrl;
+                        iframe.style.width = '100%';
+                        iframe.style.height = '300px';
+                        iframe.style.border = 'none';
+                        
+                        iframe.onerror = function() {
+                            container.innerHTML = '<div style="padding: 20px; text-align: center; color: #dc3545;">Unable to load PDF preview. <a href="' + resumeUrl + '" target="_blank">Click here to open</a></div>';
+                        };
+                        
+                        container.appendChild(iframe);
+                        resumeArea.appendChild(container);
+                    }
+                } else {
+                    resumeArea.innerHTML = '<p class="small text-muted">No resume uploaded.</p>';
+                }
+            }
+
+            // Handle checkbox change
+            const useSavedResumeCheckbox = document.getElementById('useSavedResumeCheckbox');
+            if (useSavedResumeCheckbox) {
+                useSavedResumeCheckbox.addEventListener('change', function() {
+                    const savedResume = applicationModalEl.dataset.currentSavedResume || '';
+                    const currentResume = applicationModalEl.dataset.currentAppResume || '';
+                    updateResumeFileState(this.checked);
+                    updateResumePreview(currentResume, savedResume);
+                });
+            }
+
+            // Handle file input change
+            const modalResumeFile = document.getElementById('modalResumeFile');
+            if (modalResumeFile) {
+                modalResumeFile.addEventListener('change', function() {
+                    const savedResume = applicationModalEl.dataset.currentSavedResume || '';
+                    const currentResume = applicationModalEl.dataset.currentAppResume || '';
+                    updateResumePreview(currentResume, savedResume);
+                });
+            }
+
+            document.querySelectorAll('.view-application-btn').forEach(btn => {
+                btn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    // remember current application id and saved resume
+                    const appId = btn.dataset.applicationId || '';
+                    const savedResume = btn.dataset.savedResume || '';
+                    const fullname = btn.dataset.fullname || '';
+                    const email = btn.dataset.email || '';
+                    const phone = btn.dataset.phone || '';
+                    const location = btn.dataset.location || '';
+                    const resume = btn.dataset.resume || '';
+                    const cover = btn.dataset.cover || '';
+                    const jobtitle = btn.dataset.jobtitle || '';
+
+                    document.getElementById('modalJobTitle').textContent = jobtitle;
+                    document.getElementById('modalFullName').value = fullname;
+                    document.getElementById('modalEmail').value = email;
+                    document.getElementById('modalPhone').value = phone;
+                    document.getElementById('modalLocation').value = location;
+                    document.getElementById('modalCover').value = cover;
+
+                    const resumeArea = document.getElementById('modalResumeArea');
+                    resumeArea.innerHTML = '';
+                    // Show resume from the application if present, otherwise saved resume placeholder
+                    let resumeUrl = '';
+                    if (resume) resumeUrl = resume.startsWith('/') ? resume : ('/' + resume);
+                    else if (savedResume) resumeUrl = savedResume.startsWith('/') ? savedResume : ('/' + savedResume);
+
+                    if (resumeUrl) {
+                        const link = document.createElement('a');
+                        link.href = resumeUrl;
+                        link.target = '_blank';
+                        link.textContent = 'Open resume';
+                        link.className = 'btn btn-sm btn-outline-primary';
+                        resumeArea.appendChild(link);
+
+                        if (resumeUrl.toLowerCase().endsWith('.pdf')) {
+                            const iframe = document.createElement('iframe');
+                            iframe.src = resumeUrl;
+                            iframe.style.width = '100%';
+                            iframe.style.height = '400px';
+                            iframe.className = 'mt-2 border';
+                            resumeArea.appendChild(iframe);
+                        }
+                    } else {
+                        resumeArea.innerHTML = '<p class="small text-muted">No resume uploaded.</p>';
+                    }
+
+                    // attach dataset for later use by submit/edit handlers
+                    applicationModalEl.dataset.currentApplicationId = appId;
+                    applicationModalEl.dataset.currentSavedResume = savedResume;
+                    applicationModalEl.dataset.currentAppResume = resume || '';
+
+                    // reset edit state
+                    const useSavedWrap = document.getElementById('useSavedResumeWrap');
+                    const resumeFileWrap = document.getElementById('modalResumeFileWrap');
+                    const useSavedCheckbox = document.getElementById('useSavedResumeCheckbox');
+                    const resumeFileInput = document.getElementById('modalResumeFile');
+                    const editBtn = document.getElementById('modalEditBtn');
+                    const coverEl = document.getElementById('modalCover');
+                    
+                    // Always show checkbox and file input wrap if saved resume exists
+                    if (useSavedWrap) useSavedWrap.style.display = savedResume ? 'block' : 'none';
+                    if (resumeFileWrap) resumeFileWrap.style.display = 'block';
+                    
+                    // Default checkbox: check if savedResume exists, otherwise uncheck
+                    if (useSavedCheckbox) { useSavedCheckbox.checked = !!savedResume; }
+                    
+                    // show saved filename text
+                    const savedNameEl = document.getElementById('modalSavedFilename');
+                    const savedWrapEl = document.getElementById('modalSavedFilenameWrap');
+                    if (savedResume && savedNameEl && savedWrapEl) {
+                        const short = savedResume.split('/').pop();
+                        savedNameEl.textContent = short || savedResume;
+                        savedWrapEl.style.display = 'block';
+                    } else if (savedWrapEl) {
+                        savedWrapEl.style.display = 'none';
+                    }
+                    
+                    // set current resume link for this application
+                    const curLink = document.getElementById('modalCurrentResumeLink');
+                    if (curLink) {
+                        if (resume) {
+                            const rurl = getResumeUrl(resume);
+                            curLink.href = rurl;
+                            curLink.textContent = rurl.split('/').pop() || 'resume';
+                        } else {
+                            curLink.href = '#';
+                            curLink.textContent = '-';
+                        }
+                    }
+                    if (resumeFileInput) { resumeFileInput.value = ''; }
+                    if (editBtn) { editBtn.textContent = 'Update'; }
+                    if (coverEl) { coverEl.readOnly = false; }
+
+                    // Update file input state and preview
+                    updateResumeFileState(!!savedResume && useSavedCheckbox.checked);
+                    updateResumePreview(resume, savedResume);
+
+                    applicationModal.show();
+                });
+            });
+        }
+
+        // Modal submit handler
+        const modalSubmitBtn = document.getElementById('modalSubmitBtn');
+        const useSavedResumeCheckbox = document.getElementById('useSavedResumeCheckbox');
+        const modalResumeFile = document.getElementById('modalResumeFile');
+
+        if (modalSubmitBtn) {
+            modalSubmitBtn.addEventListener('click', async () => {
+                const appId = applicationModalEl.dataset.currentApplicationId || '';
+                if (!appId) {
+                    alert('Missing application id.');
+                    return;
+                }
+
+                const form = document.getElementById('applicationPreviewForm');
+                const cover = document.getElementById('modalCover').value || '';
+
+                const useSaved = document.getElementById('useSavedResumeCheckbox')?.checked || false;
+                const fileInput = document.getElementById('modalResumeFile');
+
+                // Show processing state
+                const originalText = modalSubmitBtn.textContent;
+                modalSubmitBtn.textContent = 'Updating...';
+                modalSubmitBtn.disabled = true;
+
+                try {
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
+                    
+                    const payload = {
+                        cover_letter: cover,
+                        use_saved_resume: useSaved ? 1 : 0,
+                    };
+
+                    if (useSaved) {
+                        payload.saved_resume_path = applicationModalEl.dataset.currentSavedResume || '';
+                    }
+
+                    const resp = await fetch('/applications/' + appId, {
+                        method: 'PUT',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify(payload),
+                    });
+
+                    if (resp.ok) {
+                        try {
+                            const data = await resp.json();
+                            applicationModal.hide();
+                            alert('Application updated successfully!');
+                            setTimeout(() => location.reload(), 600);
+                        } catch (e) {
+                            applicationModal.hide();
+                            alert('Application updated successfully!');
+                            setTimeout(() => location.reload(), 600);
+                        }
+                    } else {
+                        const errorText = await resp.text();
+                        console.error('Update failed:', resp.status, errorText);
+                        alert(`Failed to update application (${resp.status}). Check console for details.`);
+                    }
+                } catch (err) {
+                    console.error('Fetch error:', err);
+                    alert('Error while sending update: ' + err.message);
+                } finally {
+                    modalSubmitBtn.textContent = originalText;
+                    modalSubmitBtn.disabled = false;
+                }
+            });
         }
     </script>
 </body>

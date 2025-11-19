@@ -47,9 +47,18 @@ class SkillExtractionService
         $skills = array_slice(array_unique($skills), 0, 50);
 
         foreach ($skills as $skill) {
+            // Try to find the skill in the database to get its ID and category
+            $skillRecord = Skill::query()
+                ->whereRaw('LOWER(name) = ?', [strtolower($skill)])
+                ->first();
+
             UserSkill::updateOrCreate(
                 ['user_id' => $userId, 'skill_name' => $skill],
-                ['confidence_score' => 1.00, 'extracted_from' => 'resume']
+                [
+                    'skill_id' => $skillRecord?->id,
+                    'confidence_score' => 1.00,
+                    'extracted_from' => 'resume'
+                ]
             );
         }
     }

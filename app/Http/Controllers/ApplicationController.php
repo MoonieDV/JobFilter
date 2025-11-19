@@ -26,8 +26,21 @@ class ApplicationController extends Controller
         return view('applications.index', compact('applications'));
     }
 
-    public function store(Request $request, Job $job, SkillExtractionService $skillExtractor)
+    public function store(Request $request, ?Job $job = null, SkillExtractionService $skillExtractor = null)
     {
+        if ($skillExtractor === null) {
+            $skillExtractor = app(SkillExtractionService::class);
+        }
+
+        // Handle both route patterns: POST /jobs/{job}/apply and POST /applications with job_id in body
+        if ($job === null) {
+            $jobId = $request->input('job_id');
+            if (! $jobId) {
+                abort(400, 'job_id is required');
+            }
+            $job = Job::findOrFail($jobId);
+        }
+
         $request->validate([
             'cover_letter' => 'nullable|string|max:5000',
             'resume' => [
@@ -48,7 +61,7 @@ class ApplicationController extends Controller
             ->first();
 
         if ($existing) {
-            return back()->withErrors(['resume' => 'You have already applied to this job.']);
+            return response()->json(['error' => 'You have already applied to this job.'], 422);
         }
 
         $resumePath = null;
@@ -88,7 +101,71 @@ class ApplicationController extends Controller
             'reference_type' => Application::class,
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json(['status' => 'Application submitted!', 'application' => $application], 201);
+        }
+
         return back()->with('status', 'Application submitted! We will keep you posted via email.');
+    }
+
+    public function update(Request $request, Application $application, SkillExtractionService $skillExtractor = null)
+    {
+        if ($skillExtractor === null) {
+            $skillExtractor = app(SkillExtractionService::class);
+        }
+
+        if ($application->applicant_id !== $request->user()->id) {
+            abort(403, 'Unauthorized');
+        }
+
+        $request->validate([
+            'cover_letter' => 'nullable|string|max:5000',
+            'resume' => [
+                'nullable',
+                File::types(['pdf', 'doc', 'docx'])->max(5 * 1024),
+            ],
+            'use_saved_resume' => 'nullable|boolean',
+            'saved_resume_path' => 'nullable|string',
+        ]);
+
+        $user = $request->user();
+        $resumePath = $application->resume_path;
+        $uploadedNewResume = false;
+
+        if ($request->hasFile('resume')) {
+            // Delete old resume if it exists
+            if ($application->resume_path) {
+                Storage::disk('public')->delete($application->resume_path);
+            }
+            $resumePath = $request->file('resume')->store('resumes', 'public');
+            $user->update(['resume_path' => $resumePath]);
+            $uploadedNewResume = true;
+        } elseif ($request->boolean('use_saved_resume', false)) {
+            // Use the saved resume path from the request or user's current resume
+            $savedPath = $request->input('saved_resume_path') ?: $user->resume_path;
+            if ($savedPath) {
+                $resumePath = $savedPath;
+            }
+        }
+
+        if ($uploadedNewResume && $resumePath) {
+            $this->refreshSkillsFromResume($skillExtractor, $user->id, $resumePath);
+        }
+
+        $application->update([
+            'full_name' => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'location' => $user->company_address ?? $user->bio,
+            'resume_path' => $resumePath,
+            'cover_letter' => $request->input('cover_letter'),
+        ]);
+
+        if ($request->expectsJson()) {
+            return response()->json(['status' => 'Application updated!', 'application' => $application], 200);
+        }
+
+        return back()->with('status', 'Application updated successfully.');
     }
 
     protected function refreshSkillsFromResume(SkillExtractionService $skillExtractor, int $userId, string $resumePath): void
