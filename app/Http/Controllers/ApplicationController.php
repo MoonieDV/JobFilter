@@ -221,6 +221,60 @@ class ApplicationController extends Controller
         }
     }
 
+    public function scheduleInterview(Request $request, Application $application)
+    {
+        $user = $request->user();
+
+        // Only employer who posted the job can schedule interviews
+        if ($user->role !== 'employer' || $application->employer_id !== $user->id) {
+            abort(403, 'Unauthorized');
+        }
+
+        $request->validate([
+            'interview_date' => ['required', 'date', 'after:today'],
+            'interview_time' => ['required', 'string'],
+            'interview_type' => ['required', 'in:Online,Physical'],
+            'interview_location' => ['nullable', 'string', 'max:255', 'required_if:interview_type,Physical'],
+        ]);
+
+        $interviewDateTime = $request->input('interview_date') . ' ' . $request->input('interview_time');
+        $interviewType = $request->input('interview_type');
+        $interviewLocation = $request->input('interview_location');
+
+        // Update application status
+        $application->update([
+            'status' => 'interview',
+        ]);
+
+        // Generate interview letter message
+        $interviewMessage = "Hi! We would like to interview you on " . date('F j, Y \a\t g:i A', strtotime($interviewDateTime));
+        if ($interviewType === 'Online') {
+            $interviewMessage .= " (Online).";
+        } else {
+            $interviewMessage .= " (Physical) at " . ($interviewLocation ?? 'TBD') . ".";
+        }
+
+        // Create notification for the job seeker
+        Notification::create([
+            'user_id' => $application->applicant_id,
+            'title' => 'Interview Scheduled',
+            'message' => "Interview scheduled for {$application->job->title} position. {$interviewMessage}",
+            'type' => 'success',
+            'reference_id' => $application->id,
+            'reference_type' => Application::class,
+        ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'status' => 'Interview scheduled successfully!',
+                'message' => $interviewMessage,
+                'application' => $application->fresh(),
+            ], 200);
+        }
+
+        return back()->with('status', 'Interview scheduled successfully!');
+    }
+
     public function destroy(Application $application)
     {
         if ($application->applicant_id !== Auth::id()) {

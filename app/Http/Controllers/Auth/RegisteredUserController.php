@@ -35,7 +35,9 @@ class RegisteredUserController extends Controller
         $role = in_array($roleInput, ['employer', 'admin'], true) ? 'employer' : 'job_seeker';
 
         $rules = [
-            'name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'middle_name' => ['nullable', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', Rules\Password::defaults()],
             'role' => ['required', 'string'],
@@ -61,13 +63,23 @@ class RegisteredUserController extends Controller
 
         $validated = $request->validate($rules);
 
+        // Build a full name string for legacy uses
+        $fullNameParts = array_filter([
+            $validated['first_name'] ?? null,
+            $validated['middle_name'] ?? null,
+            $validated['last_name'] ?? null,
+        ]);
+        $fullName = implode(' ', $fullNameParts);
+
         $resumePath = null;
         if ($role === 'job_seeker' && $request->hasFile('resume')) {
             $resumePath = $resumeStorage->store($request->file('resume'));
         }
 
         $user = User::create([
-            'name' => $validated['name'],
+            'name' => $fullName,
+            'firstname' => $validated['first_name'],
+            'lastname' => $validated['last_name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'role' => $role,
