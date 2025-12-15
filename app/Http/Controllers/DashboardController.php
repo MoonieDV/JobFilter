@@ -53,6 +53,12 @@ class DashboardController extends Controller
             ->where('applicant_id', $user->id)
             ->count();
 
+        // Employer responses to this user's applications (e.g. shortlisted, hired, or interview scheduled)
+        $responsesCount = Application::query()
+            ->where('applicant_id', $user->id)
+            ->whereIn('status', ['shortlisted', 'hired', 'interview'])
+            ->count();
+
         $recentApplications = Application::query()
             ->with('job')
             ->where('applicant_id', $user->id)
@@ -63,8 +69,75 @@ class DashboardController extends Controller
         $latestJobs = Job::query()
             ->active()
             ->latest('published_at')
-            ->limit(10)
+            ->limit(50)
             ->get();
+
+        // Calculate most common skills from all active jobs for recommendations
+        $allActiveJobs = Job::query()
+            ->active()
+            ->get();
+        
+        $skillFrequency = [];
+        foreach ($allActiveJobs as $job) {
+            $requiredSkills = collect($job->required_skills ?? [])
+                ->map(fn ($skill) => is_string($skill) ? trim($skill) : '')
+                ->filter()
+                ->unique();
+            
+            foreach ($requiredSkills as $skill) {
+                $normalized = mb_strtolower($skill);
+                if (!isset($skillFrequency[$normalized])) {
+                    $skillFrequency[$normalized] = [
+                        'name' => $skill, // Keep original casing
+                        'count' => 0,
+                    ];
+                }
+                $skillFrequency[$normalized]['count']++;
+            }
+        }
+        
+        // Sort by frequency and get top 5 most common skills
+        $recommendedSkills = collect($skillFrequency)
+            ->sortByDesc('count')
+            ->take(5)
+            ->pluck('name')
+            ->values()
+            ->all();
+
+        // Compute how many active jobs match the user's skills (simple overlap)
+        $matchingJobsCount = 0;
+        $averageMatchScore = 0;
+        if ($userSkills->isNotEmpty()) {
+            $userSkillSet = $userSkills
+                ->map(fn (string $skill) => mb_strtolower($skill))
+                ->unique()
+                ->values();
+
+            $matchScores = [];
+
+            $matchingJobsCount = $latestJobs->filter(function (Job $job) use ($userSkillSet, &$matchScores) {
+                $requiredSkills = collect($job->required_skills ?? [])
+                    ->map(fn ($skill) => is_string($skill) ? mb_strtolower($skill) : '')
+                    ->filter()
+                    ->unique();
+
+                if ($requiredSkills->isEmpty()) {
+                    return false;
+                }
+
+                $overlap = $requiredSkills->intersect($userSkillSet)->count();
+                $score = (int) round(($overlap / $requiredSkills->count()) * 100);
+
+                $matchScores[] = $score;
+
+                // Consider it a "match" if at least one required skill overlaps
+                return $overlap > 0;
+            })->count();
+
+            if (! empty($matchScores)) {
+                $averageMatchScore = (int) round(array_sum($matchScores) / count($matchScores));
+            }
+        }
 
         $employerJobs = collect();
         $employerStats = [
@@ -102,8 +175,12 @@ class DashboardController extends Controller
             'userSkills' => $userSkills,
             'userSkillsWithCategories' => $userSkillsWithCategories,
             'applicationsCount' => $applicationsCount,
+            'responsesCount' => $responsesCount,
             'recentApplications' => $recentApplications,
             'latestJobs' => $latestJobs,
+            'matchingJobsCount' => $matchingJobsCount,
+            'averageMatchScore' => $averageMatchScore,
+            'recommendedSkills' => $recommendedSkills,
             'employerJobs' => $employerJobs,
             'employerStats' => $employerStats,
         ]);

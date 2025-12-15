@@ -1,0 +1,77 @@
+services:
+  - type: web
+    name: jobfilter-app
+    env: docker
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        value: db.ubbatwwqdndhlfviclwr.supabase.co
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_DATABASE
+        value: postgres
+      - key: DB_USERNAME
+        value: postgres
+      - key: DB_PASSWORD
+        value: phplaravel99
+      - key: SUPABASE_URL
+        value: https://ubbatwwqdndhlfviclwr.supabase.co
+      - key: SUPABASE_KEY
+        value: sb_publishable_Co5DWyHPbkflspKuYg-J9w_eccoeKsB
+      - key: SUPABASE_SECRET_KEY
+        value: sb_secret_3EE2PlEhyDkBhgH36TTKLA_H080uTKv
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: SESSION_DRIVER
+        value: cookie
+      - key: CACHE_DRIVER
+        value: file
+      - fromGroup: jobfilter-env
+    buildCommand: composer install && php artisan migrate --force && npm install && npm run build
+    startCommand: php artisan serve --host=0.0.0.0 --port=$PORT
+
+  - type: pserv
+    name: jobfilter-db
+    env: docker
+    plan: free
+    ipAllowList: []
+    envVars:
+      - key: POSTGRES_DB
+        value: jobfilter
+      - key: POSTGRES_USER
+        value: postgres
+      - fromGroup: jobfilter-db-env
+
+envVarGroups:
+  - name: jobfilter-env
+    envVars:
+      - key: APP_KEY
+        sync: false
+      - key: DB_HOST
+        value: jobfilter-db
+      - key: DB_PORT
+        value: 5432
+      - key: DB_DATABASE
+        value: jobfilter
+      - key: DB_USERNAME
+        value: postgres
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+
+  - name: jobfilter-db-env
+    envVars:
+      - key: POSTGRES_PASSWORD
+        sync: false

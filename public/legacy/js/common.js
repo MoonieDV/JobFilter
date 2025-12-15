@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Confirm logout for legacy links and Laravel forms
     const confirmLogout = (event) => {
-        const ok = window.confirm('Are you sure you want to log out?');
+        const ok = window.confirm('Do you want to logout?');
         if (!ok) {
             event.preventDefault();
             event.stopPropagation();
@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     document.querySelectorAll('a[href="process_logout.php"]').forEach(link => {
-        link.addEventListener('click', confirmLogout);
+      link.addEventListener('click', confirmLogout);
     });
 
     document.querySelectorAll('form[action*="logout"], form.needs-logout-confirm').forEach(form => {

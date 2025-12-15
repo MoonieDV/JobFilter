@@ -32,5 +32,19 @@
                 {{ $slot }}
             </main>
         </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                // Attach confirmation to any logout form on the page
+                document.querySelectorAll('form[action*="logout"]').forEach(function (form) {
+                    form.addEventListener('submit', function (event) {
+                        if (!window.confirm('Do you want to logout?')) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                        }
+                    });
+                });
+            });
+        </script>
     </body>
 </html>
