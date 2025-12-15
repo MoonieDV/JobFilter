@@ -208,7 +208,7 @@
                                         @else
                                             <a href="{{ route('login') }}" class="btn btn-outline-primary">Sign in to Apply</a>
                                         @endauth
-                                        <a href="{{ route('jobs.show', $job) }}" class="btn btn-outline-secondary">View Details</a>
+                                        <button type="button" class="btn btn-outline-secondary btn-view-details" data-job-id="{{ $job->id }}" data-bs-toggle="modal" data-bs-target="#jobDetailsModal">View Details</button>
                                     </div>
                                 </div>
                                 <p class="mt-3 text-muted">{{ Str::limit(strip_tags($job->description), 220) }}</p>
@@ -301,34 +301,36 @@
     </footer>
 
     <!-- Application Modal (for new applications from job listing) -->
-    <div class="modal fade" id="applicationModal" tabindex="-1" aria-labelledby="applicationModalLabel" aria-hidden="true">
+    <div class="modal fade" id="applicationModal" tabindex="-1" aria-labelledby="applicationModalLabel" aria-hidden="true" data-bs-backdrop="static">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="applicationModalLabel">Apply for <span id="modalJobTitle"></span></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-bottom-0 bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h5 class="modal-title text-white fw-bold" id="applicationModalLabel">
+                        <i class="bi bi-file-earmark-text me-2"></i>Apply for <span id="modalJobTitle"></span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body pt-4">
                     <form id="applicationPreviewForm">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">Full Name</label>
+                                <label class="form-label fw-semibold">Full Name</label>
                                 <input type="text" id="modalFullName" class="form-control" value="{{ auth()->user()->name ?? '' }}">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Email</label>
+                                <label class="form-label fw-semibold">Email</label>
                                 <input type="text" id="modalEmail" class="form-control" value="{{ auth()->user()->email ?? '' }}">
                             </div>
-                            <div class="col-md-6 mt-2">
-                                <label class="form-label">Phone</label>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Phone</label>
                                 <input type="text" id="modalPhone" class="form-control">
                             </div>
-                            <div class="col-md-6 mt-2">
-                                <label class="form-label">Location</label>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Location</label>
                                 <input type="text" id="modalLocation" class="form-control">
                             </div>
-                            <div class="col-12 mt-3">
-                                <label class="form-label">Resume <small class="text-muted">(PDF, DOC, DOCX, max 5MB)</small></label>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Resume <small class="text-muted fw-normal">(PDF, DOC, DOCX, max 5MB)</small></label>
 
                                 <div class="mt-2 small" id="modalCurrentResumeWrap">Current resume: <a id="modalCurrentResumeLink" href="#" target="_blank">-</a></div>
 
@@ -344,22 +346,26 @@
                                 <div class="mt-2 small text-muted" id="modalSavedFilenameWrap" style="display:none;">Saved: <span id="modalSavedFilename"></span></div>
 
                                 <div class="mt-3" id="modalResumeFileWrap">
-                                    <label class="form-label small">Choose File</label>
+                                    <label class="form-label small fw-semibold">Choose File</label>
                                     <input type="file" id="modalResumeFile" class="form-control form-control-sm" accept=".pdf,.doc,.docx">
                                 </div>
 
                                 <div class="form-text small text-muted mt-2">Preview is shown for PDF files only.</div>
                             </div>
-                            <div class="col-12 mt-3">
-                                <label class="form-label">Cover Letter</label>
-                                <textarea id="modalCover" class="form-control" rows="5"></textarea>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Cover Letter</label>
+                                <textarea id="modalCover" class="form-control" rows="5" placeholder="Tell the employer why you're a great fit..."></textarea>
                             </div>
                         </div>
                     </form>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="modalSubmitBtn">SUBMIT APPLICATION</button>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" id="modalSubmitBtn">
+                        <i class="bi bi-send me-1"></i>Submit Application
+                    </button>
                 </div>
             </div>
         </div>
@@ -621,7 +627,280 @@
             });
         }
     </script>
+    <!-- Job Details Modal -->
+    <div class="modal fade" id="jobDetailsModal" tabindex="-1" aria-labelledby="jobDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <div class="w-100">
+                        <h6 class="text-muted small mb-1" id="jobCompanyName"></h6>
+                        <h5 class="modal-title fw-bold" id="jobDetailsModalLabel"></h5>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-3">
+                    <div id="jobDetailsContent">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="applyFromDetailsBtn" style="display: none;">
+                        <i class="bi bi-send me-2"></i>Apply Now
+                    </button>
+                    <button type="button" class="btn btn-success disabled" id="appliedStatusBtn" style="display: none;">
+                        <i class="bi bi-check-circle me-2"></i>Already Applied
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fix modal backdrop darkening issue and refresh dashboard views
+        const jobDetailsModal = document.getElementById('jobDetailsModal');
+        let currentJobIdInModal = null;
+        
+        if (jobDetailsModal) {
+            jobDetailsModal.addEventListener('hidden.bs.modal', function () {
+                // Remove all modal backdrops
+                document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+                    backdrop.remove();
+                });
+                // Ensure body is not locked
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+                
+                // Refresh job views on dashboard if we're on the jobs page
+                if (currentJobIdInModal) {
+                    refreshDashboardViews(currentJobIdInModal);
+                    currentJobIdInModal = null;
+                }
+            });
+        }
+        
+        // Function to refresh views on dashboard
+        function refreshDashboardViews(jobId) {
+            console.log('Refreshing views for job:', jobId);
+            
+            // Always fetch total views for all jobs (works on any page)
+            fetch('/api/employer/total-views')
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to fetch total views');
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Total views updated:', data.totalViews);
+                    
+                    // Update the dashboard stat card if present (on dashboard page)
+                    const viewsCard = document.querySelector('[data-stat="job-views"]');
+                    if (viewsCard) {
+                        const statNumber = viewsCard.querySelector('.stat-number');
+                        if (statNumber) {
+                            statNumber.textContent = data.totalViews;
+                            console.log('Updated dashboard job views to:', data.totalViews);
+                        }
+                    }
+                })
+                .catch(error => console.error('Error fetching total views:', error));
+        }
+    </script>
+
+    <style>
+        #jobDetailsModal .modal-content {
+            border-radius: 12px;
+        }
+        
+        .job-details-container h6 {
+            color: #6c757d;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        
+        .job-details-container .job-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            padding: 1rem 0;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            padding: 1rem;
+        }
+        
+        .job-details-container .job-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: #495057;
+        }
+        
+        .job-details-container .job-meta i {
+            color: #0d6efd;
+            font-size: 1.1rem;
+        }
+        
+        .job-details-container section {
+            margin-bottom: 2rem;
+        }
+        
+        .job-details-container section h6 {
+            color: #212529;
+            text-transform: none;
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .job-details-container section p {
+            color: #495057;
+            line-height: 1.6;
+            margin: 0;
+        }
+        
+        .job-details-container .badge {
+            font-weight: 500;
+            padding: 0.5rem 0.75rem;
+        }
+        
+        .job-details-container .badge.bg-light {
+            background-color: #e9ecef !important;
+            color: #212529 !important;
+        }
+    </style>
+
     <script src="{{ asset('legacy/js/common.js') }}"></script>
     <script src="{{ asset('legacy/js/jobs.js') }}"></script>
+    <script>
+        // Handle View Details button click
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('btn-view-details')) {
+                const jobId = e.target.dataset.jobId;
+                currentJobIdInModal = jobId;
+                const modal = new bootstrap.Modal(document.getElementById('jobDetailsModal'));
+                
+                // Fetch job details via AJAX
+                fetch(`/api/jobs/${jobId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const job = data.job;
+                        const contentDiv = document.getElementById('jobDetailsContent');
+                        const titleEl = document.getElementById('jobDetailsModalLabel');
+                        const companyEl = document.getElementById('jobCompanyName');
+                        const applyBtn = document.getElementById('applyFromDetailsBtn');
+                        const appliedBtn = document.getElementById('appliedStatusBtn');
+                        
+                        titleEl.textContent = job.title;
+                        companyEl.textContent = job.company_name;
+                        
+                        let skillsHtml = '';
+                        if (job.required_skills && job.required_skills.length > 0) {
+                            skillsHtml = job.required_skills.map(skill => 
+                                `<span class="badge rounded-pill bg-light text-dark me-2 mb-2">${skill}</span>`
+                            ).join('');
+                        }
+                        
+                        let preferredSkillsHtml = '';
+                        if (job.preferred_skills && job.preferred_skills.length > 0) {
+                            preferredSkillsHtml = job.preferred_skills.map(skill => 
+                                `<span class="badge rounded-pill bg-light text-secondary me-2 mb-2">${skill}</span>`
+                            ).join('');
+                        }
+                        
+                        contentDiv.innerHTML = `
+                            <div class="job-details-container">
+                                <div class="job-meta">
+                                    <span><i class="bi bi-geo-alt"></i> ${job.location}</span>
+                                    <span><i class="bi bi-briefcase"></i> ${job.employment_type}</span>
+                                    ${job.salary ? `<span><i class="bi bi-currency-dollar"></i> $${parseFloat(job.salary).toLocaleString()}</span>` : ''}
+                                    <span><i class="bi bi-calendar3"></i> ${new Date(job.published_at).toLocaleDateString()}</span>
+                                </div>
+                                
+                                ${job.description ? `
+                                    <section>
+                                        <h6>Description</h6>
+                                        <p>${job.description.replace(/\n/g, '<br>')}</p>
+                                    </section>
+                                ` : ''}
+                                
+                                ${job.responsibilities ? `
+                                    <section>
+                                        <h6>Responsibilities</h6>
+                                        <p>${job.responsibilities.replace(/\n/g, '<br>')}</p>
+                                    </section>
+                                ` : ''}
+                                
+                                ${job.requirements ? `
+                                    <section>
+                                        <h6>Requirements</h6>
+                                        <p>${job.requirements.replace(/\n/g, '<br>')}</p>
+                                    </section>
+                                ` : ''}
+                                
+                                ${skillsHtml ? `
+                                    <section>
+                                        <h6>Required Skills</h6>
+                                        <div>${skillsHtml}</div>
+                                    </section>
+                                ` : ''}
+                                
+                                ${preferredSkillsHtml ? `
+                                    <section>
+                                        <h6>Preferred Skills</h6>
+                                        <div>${preferredSkillsHtml}</div>
+                                    </section>
+                                ` : ''}
+                            </div>
+                        `;
+                        
+                        // Check if user already applied
+                        const applyJobBtn = document.querySelector(`[data-job-id="${jobId}"].btn-apply-job`);
+                        const alreadyApplied = !applyJobBtn || applyJobBtn.style.display === 'none';
+                        
+                        if (alreadyApplied) {
+                            applyBtn.style.display = 'none';
+                            appliedBtn.style.display = 'block';
+                        } else {
+                            applyBtn.style.display = 'block';
+                            appliedBtn.style.display = 'none';
+                            
+                            applyBtn.onclick = function() {
+                                // Close the job details modal
+                                const jobDetailsModalEl = document.getElementById('jobDetailsModal');
+                                const jobDetailsModalInstance = bootstrap.Modal.getInstance(jobDetailsModalEl);
+                                if (jobDetailsModalInstance) {
+                                    jobDetailsModalInstance.hide();
+                                }
+                                
+                                // Click the apply button after a short delay to ensure modal is closed
+                                setTimeout(() => {
+                                    if (applyJobBtn) {
+                                        applyJobBtn.click();
+                                    } else {
+                                        alert('Please sign in to apply for this job.');
+                                        window.location.href = '{{ route("login") }}';
+                                    }
+                                }, 300);
+                            };
+                        }
+                        
+                        modal.show();
+                    })
+                    .catch(error => {
+                        console.error('Error loading job details:', error);
+                        document.getElementById('jobDetailsContent').innerHTML = '<p class="text-danger"><i class="bi bi-exclamation-circle me-2"></i>Error loading job details. Please try again.</p>';
+                        modal.show();
+                    });
+            }
+        });
+    </script>
 </body>
 </html>

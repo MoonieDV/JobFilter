@@ -74,10 +74,7 @@
                         <h5 class="fw-bold mb-2">{{ $user->name }}</h5>
                         <p class="text-muted small mb-2">{{ $user->email }}</p>
                         <p class="text-muted small mb-2">Role: {{ Str::headline($role) }}</p>
-                        <form method="POST" action="{{ route('logout') }}" class="needs-logout-confirm">
-                            @csrf
-                            <button class="btn btn-outline-danger btn-sm">Logout</button>
-                        </form>
+                        <button class="btn btn-outline-danger btn-sm" id="logoutBtn">Logout</button>
                         <hr class="mt-3">
                     </div>
                     <ul class="navbar-nav ms-auto mb-2 mb-lg-0" id="navMenuList">
@@ -101,8 +98,8 @@
                 </div>
                 <div class="col-12 col-md-4 text-md-end">
                     <div class="d-flex justify-content-md-end gap-2">
-                        <button class="btn btn-light btn-sm" data-role-switch="job_seeker">Job Seeker</button>
-                        <button class="btn btn-outline-light btn-sm" data-role-switch="employer">Employer</button>
+                        <button class="btn btn-light btn-sm" id="jobSeekerBtn" onclick="showRoleSwitchModal('job_seeker')">Job Seeker</button>
+                        <button class="btn btn-outline-light btn-sm" id="employerBtn" onclick="showRoleSwitchModal('employer')">Employer</button>
                     </div>
                 </div>
             </div>
@@ -132,19 +129,19 @@
                         </div>
                     </div>
                     <div class="col-12 col-md-3 mb-3">
-                        <div class="card stat-card text-center">
+                        <div class="card stat-card text-center" data-stat="avg-match-score">
                             <div class="card-body">
                                 <div class="stat-icon mb-2">📈</div>
-                                <h3 class="stat-number">100%</h3>
+                                <h3 class="stat-number" id="avgMatchScoreCount">0%</h3>
                                 <p class="stat-label">Avg. Match Score</p>
                             </div>
                         </div>
                     </div>
                     <div class="col-12 col-md-3 mb-3">
-                        <div class="card stat-card text-center">
+                        <div class="card stat-card text-center" data-stat="responses">
                             <div class="card-body">
                                 <div class="stat-icon mb-2">📧</div>
-                                <h3 class="stat-number">1M</h3>
+                                <h3 class="stat-number" id="responsesCount">0</h3>
                                 <p class="stat-label">Responses</p>
                             </div>
                         </div>
@@ -153,47 +150,58 @@
 
                 <div class="row mb-4">
                     <div class="col-12 col-lg-8 mb-4">
-                        <div class="card h-100">
-                            <div class="card-header d-flex justify-content-between align-items-center">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-header bg-gradient border-0 d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                                 <div>
-                                    <h5 class="mb-0">Your Skills Profile</h5>
-                                    <small class="text-muted">Grouped by category</small>
+                                    <h5 class="mb-0 text-white fw-bold">Your Skills Profile</h5>
+                                    <small class="text-white-50">Grouped by category</small>
                                 </div>
-                                <button class="btn btn-light btn-sm rounded-pill fw-semibold">+ Add Skill</button>
+                                <button class="btn btn-light btn-sm rounded-pill fw-semibold" data-bs-toggle="modal" data-bs-target="#addSkillModal">
+                                    <i class="bi bi-plus-circle me-1"></i>Add Skill
+                                </button>
                             </div>
                             <div class="card-body">
-                                <div class="skills-container" style="max-height:260px;overflow:auto;">
+                                <div class="skills-container" id="skillsContainer" style="max-height:300px;overflow-y:auto;">
                                     @forelse ($skillsByCategory as $category => $skills)
-                                        <div class="mb-3">
-                                            <div class="px-3 py-2 bg-dark bg-opacity-25 border border-secondary rounded d-flex justify-content-between align-items-center">
-                                                <span class="fw-semibold text-white">{{ $category }}</span>
-                                                <span class="badge bg-secondary text-light border-0">{{ $skills->count() }}</span>
+                                        <div class="mb-4 skill-category" data-category="{{ $category }}">
+                                            <div class="px-3 py-2 bg-light border-start border-4 border-primary rounded-lg d-flex justify-content-between align-items-center mb-2">
+                                                <span class="fw-bold text-dark">{{ $category }}</span>
+                                                <span class="badge bg-primary text-light border-0">{{ $skills->count() }}</span>
                                             </div>
-                                            <div class="pt-2 px-1">
+                                            <div class="pt-2 px-1 skill-badges">
                                                 @foreach ($skills as $skill)
-                                                    <span class="badge bg-primary me-1 mb-1">{{ $skill['name'] }}</span>
+                                                    <span class="badge bg-primary me-2 mb-2 py-2 px-3" style="font-size: 0.85rem;">
+                                                        {{ $skill['name'] }}
+                                                        <i class="bi bi-x-circle ms-1 cursor-pointer remove-skill" data-skill="{{ $skill['name'] }}" style="cursor: pointer;"></i>
+                                                    </span>
                                                 @endforeach
                                             </div>
                                         </div>
                                     @empty
-                                        <div class="alert alert-info mb-0">No skills extracted yet.</div>
+                                        <div class="alert alert-info mb-0">
+                                            <i class="bi bi-info-circle me-2"></i>No skills added yet. Click "Add Skill" to get started!
+                                        </div>
                                     @endforelse
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="col-12 col-lg-4 mb-4">
-                        <div class="card h-100">
-                            <div class="card-header">
-                                <h5 class="mb-0">Recommended Skills</h5>
+                        <div class="card border-0 shadow-sm" style="min-height: 400px;">
+                            <div class="card-header border-bottom-0 bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                <div class="text-white">
+                                    <h5 class="mb-1 fw-bold">
+                                        <i class="bi bi-lightbulb me-2"></i>Recommended Skills
+                                    </h5>
+                                    <small class="text-white-50">High-demand skills in your market</small>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                @foreach ($recommendedSkills as $skill)
-                                    <div class="recommendation-item mb-2">
-                                        <span class="badge bg-warning me-2">{{ $skill }}</span>
-                                        <small class="text-muted">High demand in your area</small>
+                            <div class="card-body overflow-auto" id="recommendedSkillsContainer" style="max-height: 350px;">
+                                <div class="text-center py-4">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
                                     </div>
-                                @endforeach
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -201,22 +209,25 @@
 
                 <div class="row mb-4">
                     <div class="col-12">
-                        <div class="card">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">Recent Applications</h5>
-                                <a href="{{ route('jobs.browse') }}" class="btn btn-primary btn-sm">View All</a>
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-gradient border-0 d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                <div>
+                                    <h5 class="mb-0 text-white fw-bold">Recent Applications</h5>
+                                    <small class="text-white-50">Track your job applications</small>
+                                </div>
+                                <a href="{{ route('jobs.browse') }}" class="btn btn-light btn-sm">Browse More Jobs</a>
                             </div>
-                            <div class="card-body">
+                            <div class="card-body p-0">
                                 <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead>
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
                                             <tr>
-                                                <th>Job Title</th>
+                                                <th class="ps-4">Job Title</th>
                                                 <th>Company</th>
                                                 <th>Applied Date</th>
                                                 <th>Status</th>
                                                 <th>Match Score</th>
-                                                <th>Actions</th>
+                                                <th class="pe-4">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -229,38 +240,57 @@
                                                     $overlap = $required->intersect($userSet)->count();
                                                     $score = $required->count() ? (int) round(($overlap / $required->count()) * 100) : 100;
                                                     $scoreColor = $score >= 90 ? 'success' : ($score >= 80 ? 'warning' : ($score >= 70 ? 'info' : 'secondary'));
+                                                    $statusBg = $application->status === 'pending' ? 'secondary' : ($application->status === 'accepted' ? 'success' : ($application->status === 'rejected' ? 'danger' : 'warning'));
                                                     $status = Str::headline($application->status ?? 'Pending');
                                                 @endphp
-                                                <tr>
-                                                    <td>{{ $application->job?->title }}</td>
+                                                <tr class="align-middle">
+                                                    <td class="ps-4 fw-semibold">{{ $application->job?->title }}</td>
                                                     <td>{{ $application->job?->company_name }}</td>
-                                                    <td>{{ optional($application->applied_at)->format('Y-m-d') }}</td>
-                                                    <td><span class="badge bg-secondary">{{ $status }}</span></td>
-                                                    <td><span class="badge bg-{{ $scoreColor }}">{{ $score }}%</span></td>
                                                     <td>
-                                                                          <a href="{{ route('jobs.show', $application->job) }}"
-                                                                              class="btn btn-sm btn-outline-primary view-application-btn"
-                                                                              data-application-id="{{ $application->id }}"
-                                                                              data-fullname="{{ e($application->full_name ?? $application->applicant?->name) }}"
-                                                                              data-email="{{ e($application->email ?? $application->applicant?->email) }}"
-                                                                              data-phone="{{ e($application->phone) }}"
-                                                                              data-location="{{ e($application->location) }}"
-                                                                              data-resume="{{ e($application->resume_path) }}"
-                                                                              data-cover="{{ e($application->cover_letter) }}"
-                                                                              data-jobtitle="{{ e($application->job?->title) }}"
-                                                                              data-saved-resume="{{ e($user->saved_resume_path ?? '') }}"
-                                                                          >View</a>
-                                                        <form action="{{ route('applications.destroy', $application) }}" method="POST" class="d-inline-block ms-2" onsubmit="return confirm('Cancel this application?');">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" class="btn btn-sm btn-outline-danger">Cancel</button>
-                                                        </form>
+                                                        <small class="text-muted">{{ optional($application->applied_at)->format('M d, Y') }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-{{ $statusBg }} text-white">
+                                                            <i class="bi bi-{{ $application->status === 'pending' ? 'hourglass-split' : ($application->status === 'accepted' ? 'check-circle' : 'x-circle') }} me-1"></i>{{ $status }}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <span class="badge bg-{{ $scoreColor }} text-white">{{ $score }}%</span>
+                                                            <small class="text-muted">match</small>
+                                                        </div>
+                                                    </td>
+                                                    <td class="pe-4">
+                                                        <div class="d-flex gap-2">
+                                                            <a href="{{ route('jobs.show', $application->job) }}"
+                                                                class="btn btn-sm btn-primary view-application-btn"
+                                                                data-application-id="{{ $application->id }}"
+                                                                data-fullname="{{ e($application->full_name ?? $application->applicant?->name) }}"
+                                                                data-email="{{ e($application->email ?? $application->applicant?->email) }}"
+                                                                data-phone="{{ e($application->phone) }}"
+                                                                data-location="{{ e($application->location) }}"
+                                                                data-resume="{{ e($application->resume_path) }}"
+                                                                data-cover="{{ e($application->cover_letter) }}"
+                                                                data-jobtitle="{{ e($application->job?->title) }}"
+                                                                data-saved-resume="{{ e($user->saved_resume_path ?? '') }}"
+                                                            >
+                                                                <i class="bi bi-eye me-1"></i>View
+                                                            </a>
+                                                            <form action="{{ route('applications.destroy', $application) }}" method="POST" class="d-inline" onsubmit="return confirm('Cancel this application?');">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                                    <i class="bi bi-trash me-1"></i>Cancel
+                                                                </button>
+                                                            </form>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="5" class="text-center text-muted py-4">
-                                                        No applications yet. <a href="{{ route('jobs.browse') }}">Start applying!</a>
+                                                    <td colspan="6" class="text-center text-muted py-5">
+                                                        <i class="bi bi-inbox" style="font-size: 2rem; opacity: 0.5;"></i>
+                                                        <p class="mt-3 mb-0">No applications yet. <a href="{{ route('jobs.browse') }}" class="text-primary fw-semibold">Start applying!</a></p>
                                                     </td>
                                                 </tr>
                                             @endforelse
@@ -294,19 +324,19 @@
                         </div>
                     </div>
                     <div class="col-12 col-md-3 mb-3">
-                        <div class="card stat-card text-center">
+                        <div class="card stat-card text-center" data-stat="avg-score">
                             <div class="card-body">
                                 <div class="stat-icon mb-2">⭐</div>
-                                <h3 class="stat-number">{{ $employerStats['avgApplicantScore'] }}%</h3>
+                                <h3 class="stat-number" id="avgScoreCount">{{ $employerStats['avgApplicantScore'] }}%</h3>
                                 <p class="stat-label">Avg. Applicant Score</p>
                             </div>
                         </div>
                     </div>
                     <div class="col-12 col-md-3 mb-3">
-                        <div class="card stat-card text-center">
+                        <div class="card stat-card text-center" data-stat="job-views">
                             <div class="card-body">
                                 <div class="stat-icon mb-2">📈</div>
-                                <h3 class="stat-number">{{ $employerStats['viewsCount'] }}</h3>
+                                <h3 class="stat-number" id="jobViewsCount">{{ $employerStats['viewsCount'] }}</h3>
                                 <p class="stat-label">Job Views</p>
                             </div>
                         </div>
@@ -354,11 +384,9 @@
                                                     <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#{{ $collapseId }}" aria-expanded="false" aria-controls="{{ $collapseId }}">
                                                         <i class="bi bi-people me-1"></i>View Applicants ({{ $appCount }})
                                                     </button>
-                                                    @if ($editRouteExists)
-                                                        <a href="{{ route('employer.jobs.edit', $job) }}" class="btn btn-sm btn-outline-secondary">
-                                                            <i class="bi bi-pencil-square me-1"></i>Edit
-                                                        </a>
-                                                    @endif
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-job" data-job-id="{{ $job->id }}" data-bs-toggle="modal" data-bs-target="#editJobModal">
+                                                        <i class="bi bi-pencil-square me-1"></i>Edit
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -419,9 +447,15 @@
                                                                             <button type="button" class="btn btn-sm btn-outline-secondary btn-view-app-form" data-app-id="{{ $application->id }}" data-job-id="{{ $job->id }}" data-job-title="{{ $job->title }}">
                                                                                 <i class="bi bi-file-earmark-text me-1"></i>View Application
                                                                             </button>
-                                                                            <button type="button" class="btn btn-sm btn-primary">
-                                                                                <i class="bi bi-calendar-plus me-1"></i>Interview
-                                                                            </button>
+                                                                            @if ($application->status === 'interview_scheduled')
+                                                                                <button type="button" class="btn btn-sm btn-secondary" disabled>
+                                                                                    <i class="bi bi-calendar-check me-1"></i>Scheduled
+                                                                                </button>
+                                                                            @else
+                                                                                <button type="button" class="btn btn-sm btn-primary btn-interview" data-application-id="{{ $application->id }}">
+                                                                                    <i class="bi bi-calendar-plus me-1"></i>Interview
+                                                                                </button>
+                                                                            @endif
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -430,11 +464,6 @@
                                                     @empty
                                                         <div class="text-muted">No applicants yet.</div>
                                                     @endforelse
-                                                    <div class="mt-3 text-end">
-                                                        <a href="{{ route('applications.index', ['job' => $job->id]) }}" class="btn btn-sm btn-outline-primary">
-                                                            <i class="bi bi-box-arrow-up-right me-1"></i>View All Applications
-                                                        </a>
-                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
@@ -468,6 +497,173 @@
             </div>
         </div>
     </footer>
+
+    <!-- Add Skill Modal -->
+    <div class="modal fade" id="addSkillModal" tabindex="-1" aria-labelledby="addSkillModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title" id="addSkillModalLabel">Add New Skill</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addSkillForm">
+                        <div class="mb-3">
+                            <label for="skillName" class="form-label">Skill Name</label>
+                            <input type="text" class="form-control" id="skillName" placeholder="e.g., Python, React, AWS" required>
+                            <small class="text-muted">Enter the skill you want to add</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="skillCategory" class="form-label">Category (Optional)</label>
+                            <select class="form-select" id="skillCategory">
+                                <option value="">Select a category or leave blank for "Other"</option>
+                                <option value="Backend Development">Backend Development</option>
+                                <option value="Frontend Development">Frontend Development</option>
+                                <option value="Data Science & Analytics">Data Science & Analytics</option>
+                                <option value="Cybersecurity">Cybersecurity</option>
+                                <option value="DevOps">DevOps</option>
+                                <option value="Mobile Development">Mobile Development</option>
+                                <option value="Cloud Computing">Cloud Computing</option>
+                                <option value="Database">Database</option>
+                                <option value="Development Tools">Development Tools</option>
+                                <option value="Version Control">Version Control</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="addSkillBtn">Add Skill</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Job Modal -->
+    <div class="modal fade" id="editJobModal" tabindex="-1" aria-labelledby="editJobModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editJobModalLabel">Edit Job Posting</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editJobForm">
+                        <input type="hidden" id="editJobId">
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="editJobTitle" class="form-label">Job Title</label>
+                                <input type="text" class="form-control" id="editJobTitle" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editJobLocation" class="form-label">Location</label>
+                                <input type="text" class="form-control" id="editJobLocation" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="editJobType" class="form-label">Employment Type</label>
+                                <select class="form-select" id="editJobType" required>
+                                    <option value="">Select type...</option>
+                                    <option value="Full Time">Full Time</option>
+                                    <option value="Part Time">Part Time</option>
+                                    <option value="Contract">Contract</option>
+                                    <option value="Freelance">Freelance</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editJobExperience" class="form-label">Experience Level</label>
+                                <select class="form-select" id="editJobExperience" required>
+                                    <option value="">Select level...</option>
+                                    <option value="Entry Level">Entry Level</option>
+                                    <option value="Mid Level">Mid Level</option>
+                                    <option value="Senior Level">Senior Level</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="editJobSalaryMin" class="form-label">Salary</label>
+                                <input type="number" class="form-control" id="editJobSalaryMin" step="0.01">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editJobDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="editJobDescription" rows="3" required></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editJobResponsibilities" class="form-label">Responsibilities</label>
+                            <textarea class="form-control" id="editJobResponsibilities" rows="3"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editJobRequirements" class="form-label">Requirements</label>
+                            <textarea class="form-control" id="editJobRequirements" rows="3"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editJobRequiredSkills" class="form-label">Required Skills (comma-separated)</label>
+                            <input type="text" class="form-control" id="editJobRequiredSkills">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editJobPreferredSkills" class="form-label">Preferred Skills (comma-separated)</label>
+                            <input type="text" class="form-control" id="editJobPreferredSkills">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveJobBtn">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interview Schedule Modal -->
+    <div class="modal fade" id="interviewModal" tabindex="-1" aria-labelledby="interviewModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="interviewModalLabel">Schedule Interview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="interviewForm">
+                        <input type="hidden" id="applicationId" name="application_id">
+                        
+                        <div class="mb-3">
+                            <label for="scheduledAt" class="form-label">Interview Date & Time</label>
+                            <input type="datetime-local" class="form-control" id="scheduledAt" name="scheduled_at" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="interviewType" class="form-label">Interview Type</label>
+                            <select class="form-select" id="interviewType" name="interview_type" required>
+                                <option value="">Select type...</option>
+                                <option value="online">Online</option>
+                                <option value="physical">Physical</option>
+                            </select>
+                        </div>
+
+                        <div class="alert alert-info" id="letterPreview" style="display: none;">
+                            <strong>Interview Letter Preview:</strong>
+                            <p id="letterText" class="mt-2"></p>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="scheduleBtn">Schedule Interview</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
         <!-- Application modal (legacy-like) -->
         <div class="modal fade" id="applicationModal" tabindex="-1" aria-labelledby="applicationModalLabel" aria-hidden="true">
@@ -586,23 +782,20 @@
             function getResumeUrl(resumePath) {
                 if (!resumePath) return '';
                 
-                // If already has /storage or http, return as-is
-                if (resumePath.startsWith('/storage') || resumePath.startsWith('http')) {
+                // If already has http, return as-is
+                if (resumePath.startsWith('http')) {
                     return resumePath;
                 }
                 
-                // If it's just a filename, prepend /storage/resumes/
-                if (!resumePath.includes('/')) {
-                    return '/storage/resumes/' + resumePath;
+                // Extract just the filename from any path
+                let filename = resumePath;
+                if (resumePath.includes('/')) {
+                    const parts = resumePath.split('/');
+                    filename = parts[parts.length - 1];
                 }
                 
-                // If it starts with resumes/, prepend /storage/
-                if (resumePath.startsWith('resumes/')) {
-                    return '/storage/' + resumePath;
-                }
-                
-                // Otherwise prepend /storage/ to the path, removing leading slash if present
-                return '/storage/' + (resumePath.startsWith('/') ? resumePath.slice(1) : resumePath);
+                // Use the new Laravel route to serve the file
+                return '/storage/resumes/' + filename;
             }
 
             // Helper function to update file input state based on checkbox
@@ -646,17 +839,27 @@
                         container.style.minHeight = '300px';
                         container.style.backgroundColor = '#f8f9fa';
                         
-                        const iframe = document.createElement('iframe');
-                        iframe.src = resumeUrl;
-                        iframe.style.width = '100%';
-                        iframe.style.height = '300px';
-                        iframe.style.border = 'none';
+                        // Try using embed tag first (often more reliable for PDFs)
+                        const embed = document.createElement('embed');
+                        embed.src = resumeUrl;
+                        embed.type = 'application/pdf';
+                        embed.style.width = '100%';
+                        embed.style.height = '300px';
+                        embed.style.border = 'none';
                         
-                        iframe.onerror = function() {
-                            container.innerHTML = '<div style="padding: 20px; text-align: center; color: #dc3545;">Unable to load PDF preview. <a href="' + resumeUrl + '" target="_blank">Click here to open</a></div>';
-                        };
+                        // Add error handling
+                        embed.addEventListener('error', function() {
+                            container.innerHTML = `
+                                <div style="padding: 20px; text-align: center;">
+                                    <div style="color: #dc3545; margin-bottom: 10px;">Unable to load PDF preview</div>
+                                    <a href="${resumeUrl}" target="_blank" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-file-pdf me-1"></i>Open PDF in New Tab
+                                    </a>
+                                </div>
+                            `;
+                        });
                         
-                        container.appendChild(iframe);
+                        container.appendChild(embed);
                         resumeArea.appendChild(container);
                     }
                 } else if (fileInput?.files?.length > 0) {
@@ -680,17 +883,27 @@
                         container.style.minHeight = '300px';
                         container.style.backgroundColor = '#f8f9fa';
                         
-                        const iframe = document.createElement('iframe');
-                        iframe.src = resumeUrl;
-                        iframe.style.width = '100%';
-                        iframe.style.height = '300px';
-                        iframe.style.border = 'none';
+                        // Try using embed tag first (often more reliable for PDFs)
+                        const embed = document.createElement('embed');
+                        embed.src = resumeUrl;
+                        embed.type = 'application/pdf';
+                        embed.style.width = '100%';
+                        embed.style.height = '300px';
+                        embed.style.border = 'none';
                         
-                        iframe.onerror = function() {
-                            container.innerHTML = '<div style="padding: 20px; text-align: center; color: #dc3545;">Unable to load PDF preview. <a href="' + resumeUrl + '" target="_blank">Click here to open</a></div>';
-                        };
+                        // Add error handling
+                        embed.addEventListener('error', function() {
+                            container.innerHTML = `
+                                <div style="padding: 20px; text-align: center;">
+                                    <div style="color: #dc3545; margin-bottom: 10px;">Unable to load PDF preview</div>
+                                    <a href="${resumeUrl}" target="_blank" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-file-pdf me-1"></i>Open PDF in New Tab
+                                    </a>
+                                </div>
+                            `;
+                        });
                         
-                        container.appendChild(iframe);
+                        container.appendChild(embed);
                         resumeArea.appendChild(container);
                     }
                 } else {
@@ -771,12 +984,33 @@
                             resumeArea.appendChild(link);
 
                             if (resumeUrl.toLowerCase().endsWith('.pdf')) {
-                                const iframe = document.createElement('iframe');
-                                iframe.src = resumeUrl;
-                                iframe.style.width = '100%';
-                                iframe.style.height = '400px';
-                                iframe.className = 'mt-2 border';
-                                resumeArea.appendChild(iframe);
+                                const container = document.createElement('div');
+                                container.className = 'mt-2 border position-relative';
+                                container.style.minHeight = '400px';
+                                container.style.backgroundColor = '#f8f9fa';
+                                
+                                // Try using embed tag first (often more reliable for PDFs)
+                                const embed = document.createElement('embed');
+                                embed.src = resumeUrl;
+                                embed.type = 'application/pdf';
+                                embed.style.width = '100%';
+                                embed.style.height = '400px';
+                                embed.style.border = 'none';
+                                
+                                // Add error handling
+                                embed.addEventListener('error', function() {
+                                    container.innerHTML = `
+                                        <div style="padding: 20px; text-align: center;">
+                                            <div style="color: #dc3545; margin-bottom: 10px;">Unable to load PDF preview</div>
+                                            <a href="${resumeUrl}" target="_blank" class="btn btn-sm btn-primary">
+                                                <i class="bi bi-file-pdf me-1"></i>Open PDF in New Tab
+                                            </a>
+                                        </div>
+                                    `;
+                                });
+                                
+                                container.appendChild(embed);
+                                resumeArea.appendChild(container);
                             }
                         } else {
                             resumeArea.innerHTML = '<p class="small text-muted">No resume uploaded.</p>';
@@ -847,12 +1081,33 @@
                         resumeArea.appendChild(link);
 
                         if (resumeUrl.toLowerCase().endsWith('.pdf')) {
-                            const iframe = document.createElement('iframe');
-                            iframe.src = resumeUrl;
-                            iframe.style.width = '100%';
-                            iframe.style.height = '400px';
-                            iframe.className = 'mt-2 border';
-                            resumeArea.appendChild(iframe);
+                            const container = document.createElement('div');
+                            container.className = 'mt-2 border position-relative';
+                            container.style.minHeight = '400px';
+                            container.style.backgroundColor = '#f8f9fa';
+                            
+                            // Try using embed tag first (often more reliable for PDFs)
+                            const embed = document.createElement('embed');
+                            embed.src = resumeUrl;
+                            embed.type = 'application/pdf';
+                            embed.style.width = '100%';
+                            embed.style.height = '400px';
+                            embed.style.border = 'none';
+                            
+                            // Add error handling
+                            embed.addEventListener('error', function() {
+                                container.innerHTML = `
+                                    <div style="padding: 20px; text-align: center;">
+                                        <div style="color: #dc3545; margin-bottom: 10px;">Unable to load PDF preview</div>
+                                        <a href="${resumeUrl}" target="_blank" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-file-pdf me-1"></i>Open PDF in New Tab
+                                        </a>
+                                    </div>
+                                `;
+                            });
+                            
+                            container.appendChild(embed);
+                            resumeArea.appendChild(container);
                         }
                     } else {
                         resumeArea.innerHTML = '<p class="small text-muted">No resume uploaded.</p>';
@@ -986,6 +1241,739 @@
             });
         }
     </script>
+
+    <!-- Interview Schedule JavaScript -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const interviewModal = document.getElementById('interviewModal');
+        const interviewForm = document.getElementById('interviewForm');
+        const applicationIdInput = document.getElementById('applicationId');
+        const scheduledAtInput = document.getElementById('scheduledAt');
+        const interviewTypeSelect = document.getElementById('interviewType');
+        const letterPreview = document.getElementById('letterPreview');
+        const letterText = document.getElementById('letterText');
+        const scheduleBtn = document.getElementById('scheduleBtn');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+        // Handle interview button clicks
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('btn-interview') || e.target.closest('.btn-interview')) {
+                const button = e.target.classList.contains('btn-interview') ? e.target : e.target.closest('.btn-interview');
+                const applicationId = button.dataset.applicationId;
+                applicationIdInput.value = applicationId;
+                scheduledAtInput.value = '';
+                interviewTypeSelect.value = '';
+                letterPreview.style.display = 'none';
+                
+                const modal = new bootstrap.Modal(interviewModal);
+                modal.show();
+            }
+        });
+
+        // Update letter preview
+        function updateLetterPreview() {
+            const scheduledAt = scheduledAtInput.value;
+            const interviewType = interviewTypeSelect.value;
+
+            if (scheduledAt && interviewType) {
+                const date = new Date(scheduledAt);
+                const formattedDate = date.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                letterText.textContent = `Hi! We would like to interview you on ${formattedDate} via ${interviewType.charAt(0).toUpperCase() + interviewType.slice(1)}.`;
+                letterPreview.style.display = 'block';
+            } else {
+                letterPreview.style.display = 'none';
+            }
+        }
+
+        scheduledAtInput.addEventListener('change', updateLetterPreview);
+        interviewTypeSelect.addEventListener('change', updateLetterPreview);
+
+        // Handle schedule button click
+        scheduleBtn.addEventListener('click', async function() {
+            const applicationId = applicationIdInput.value;
+            const scheduledAt = scheduledAtInput.value;
+            const interviewType = interviewTypeSelect.value;
+
+            if (!applicationId || !scheduledAt || !interviewType) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            try {
+                scheduleBtn.disabled = true;
+                const originalText = scheduleBtn.innerHTML;
+                scheduleBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Scheduling...';
+
+                console.log('Sending data:', {
+                    application_id: applicationId,
+                    scheduled_at: scheduledAt,
+                    interview_type: interviewType
+                });
+
+                const response = await fetch('{{ route("interview-schedules.store") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        application_id: applicationId,
+                        scheduled_at: scheduledAt,
+                        interview_type: interviewType
+                    })
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers.get('content-type'));
+
+                const responseText = await response.text();
+                console.log('Raw response:', responseText);
+
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (e) {
+                    console.error('Failed to parse JSON:', e);
+                    throw new Error('Server returned invalid response: ' + responseText.substring(0, 200));
+                }
+
+                if (!response.ok) {
+                    // Handle validation errors
+                    if (data.errors) {
+                        const errorMessages = Object.values(data.errors).flat().join('\n');
+                        throw new Error(errorMessages);
+                    }
+                    throw new Error(data.error || data.message || 'Failed to schedule interview');
+                }
+
+                // Close modal
+                bootstrap.Modal.getInstance(interviewModal).hide();
+
+                // Update the button to show scheduled status
+                const button = document.querySelector(`[data-application-id="${applicationId}"].btn-interview`);
+                if (button) {
+                    button.classList.remove('btn-primary', 'btn-interview');
+                    button.classList.add('btn-secondary');
+                    button.disabled = true;
+                    button.innerHTML = '<i class="bi bi-calendar-check me-1"></i>Scheduled';
+                }
+
+                // Show success message
+                alert('Interview scheduled successfully!');
+                
+                // Reload page to reflect changes
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+
+            } catch (error) {
+                console.error('Error:', error);
+                console.error('Full error:', error);
+                alert('Error scheduling interview: ' + error.message);
+                scheduleBtn.disabled = false;
+                scheduleBtn.innerHTML = originalText;
+            }
+        });
+    });
+
+    // Refresh job views count periodically and when page becomes visible
+    function refreshJobViewsCount() {
+        const viewsCard = document.querySelector('[data-stat="job-views"]');
+        if (!viewsCard) return;
+
+        fetch('/api/employer/total-views')
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch');
+                return response.json();
+            })
+            .then(data => {
+                const statNumber = viewsCard.querySelector('.stat-number');
+                if (statNumber) {
+                    const currentValue = parseInt(statNumber.textContent);
+                    if (currentValue !== data.totalViews) {
+                        statNumber.textContent = data.totalViews;
+                        console.log('Job views updated to:', data.totalViews);
+                    }
+                }
+            })
+            .catch(error => console.error('Error refreshing job views:', error));
+    }
+
+    // Refresh average applicant score periodically
+    function refreshAverageScore() {
+        const scoreCard = document.querySelector('[data-stat="avg-score"]');
+        if (!scoreCard) return;
+
+        fetch('/api/employer/average-score')
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch');
+                return response.json();
+            })
+            .then(data => {
+                const statNumber = scoreCard.querySelector('.stat-number');
+                if (statNumber) {
+                    const currentValue = parseFloat(statNumber.textContent);
+                    if (currentValue !== data.averageScore) {
+                        statNumber.textContent = data.averageScore + '%';
+                        console.log('Average score updated to:', data.averageScore);
+                    }
+                }
+            })
+            .catch(error => console.error('Error refreshing average score:', error));
+    }
+
+    // Refresh every 5 seconds
+    setInterval(refreshJobViewsCount, 5000);
+    setInterval(refreshAverageScore, 5000);
+
+    // Also refresh when page becomes visible (tab focus)
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            console.log('Page is visible, refreshing stats');
+            refreshJobViewsCount();
+            refreshAverageScore();
+        }
+    });
+
+    // Initial refresh on page load
+    refreshJobViewsCount();
+    refreshAverageScore();
+
+    // Handle Edit Job button click
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('btn-edit-job') || e.target.closest('.btn-edit-job')) {
+            const btn = e.target.classList.contains('btn-edit-job') ? e.target : e.target.closest('.btn-edit-job');
+            const jobId = btn.dataset.jobId;
+            
+            // Fetch job details
+            fetch(`/api/jobs/${jobId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const job = data.job;
+                    
+                    // Populate form fields
+                    document.getElementById('editJobId').value = job.id;
+                    document.getElementById('editJobTitle').value = job.title;
+                    document.getElementById('editJobLocation').value = job.location;
+                    document.getElementById('editJobType').value = job.employment_type;
+                    document.getElementById('editJobExperience').value = job.experience_level;
+                    document.getElementById('editJobSalaryMin').value = job.salary || '';
+                    document.getElementById('editJobDescription').value = job.description || '';
+                    document.getElementById('editJobResponsibilities').value = job.responsibilities || '';
+                    document.getElementById('editJobRequirements').value = job.requirements || '';
+                    document.getElementById('editJobRequiredSkills').value = (job.required_skills || []).join(', ');
+                    document.getElementById('editJobPreferredSkills').value = (job.preferred_skills || []).join(', ');
+                })
+                .catch(error => {
+                    console.error('Error loading job details:', error);
+                    alert('Error loading job details');
+                });
+        }
+    });
+
+    // Handle Save Job button click
+    document.getElementById('saveJobBtn').addEventListener('click', async function() {
+        const jobId = document.getElementById('editJobId').value;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+        
+        const jobData = {
+            title: document.getElementById('editJobTitle').value,
+            location: document.getElementById('editJobLocation').value,
+            employment_type: document.getElementById('editJobType').value,
+            experience_level: document.getElementById('editJobExperience').value,
+            salary: document.getElementById('editJobSalaryMin').value || null,
+            description: document.getElementById('editJobDescription').value,
+            responsibilities: document.getElementById('editJobResponsibilities').value,
+            requirements: document.getElementById('editJobRequirements').value,
+            required_skills: document.getElementById('editJobRequiredSkills').value.split(',').map(s => s.trim()).filter(s => s),
+            preferred_skills: document.getElementById('editJobPreferredSkills').value.split(',').map(s => s.trim()).filter(s => s),
+        };
+
+        try {
+            this.disabled = true;
+            const originalText = this.innerHTML;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+
+            const response = await fetch(`/api/jobs/${jobId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(jobData)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to update job');
+            }
+
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('editJobModal')).hide();
+            
+            // Update the job row in the table
+            const jobRow = document.querySelector(`[data-job-id="${jobId}"]`);
+            if (jobRow) {
+                const titleCell = jobRow.querySelector('a');
+                if (titleCell) {
+                    titleCell.textContent = jobData.title;
+                }
+            }
+
+            alert('Job updated successfully!');
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error updating job: ' + error.message);
+        } finally {
+            this.disabled = false;
+            this.innerHTML = originalText;
+        }
+    });
+
+    // Refresh interview count for job seekers
+    function refreshInterviewCount() {
+        const responsesCard = document.querySelector('[data-stat="responses"]');
+        if (!responsesCard) return;
+
+        fetch('/api/job-seeker/interview-count')
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch');
+                return response.json();
+            })
+            .then(data => {
+                const statNumber = responsesCard.querySelector('.stat-number');
+                if (statNumber) {
+                    const currentValue = parseInt(statNumber.textContent);
+                    if (currentValue !== data.interviewCount) {
+                        statNumber.textContent = data.interviewCount;
+                        console.log('Interview count updated to:', data.interviewCount);
+                    }
+                }
+            })
+            .catch(error => console.error('Error refreshing interview count:', error));
+    }
+
+    // Refresh average match score for job seekers
+    function refreshAverageMatchScore() {
+        const matchScoreCard = document.querySelector('[data-stat="avg-match-score"]');
+        if (!matchScoreCard) return;
+
+        fetch('/api/job-seeker/average-match-score')
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch');
+                return response.json();
+            })
+            .then(data => {
+                const statNumber = matchScoreCard.querySelector('.stat-number');
+                if (statNumber) {
+                    const currentValue = parseFloat(statNumber.textContent);
+                    if (currentValue !== data.averageMatchScore) {
+                        statNumber.textContent = data.averageMatchScore + '%';
+                        console.log('Average match score updated to:', data.averageMatchScore);
+                    }
+                }
+            })
+            .catch(error => console.error('Error refreshing average match score:', error));
+    }
+
+    // Refresh recent applications table with updated match scores
+    function refreshRecentApplications() {
+        const recentAppsTable = document.querySelector('table.table-hover tbody');
+        if (!recentAppsTable) return;
+
+        // Recalculate match scores for visible applications
+        const rows = recentAppsTable.querySelectorAll('tr');
+        rows.forEach(row => {
+            const matchScoreCell = row.querySelector('td:nth-child(5)');
+            if (matchScoreCell) {
+                // The match score is already calculated server-side, 
+                // but we can refresh it if needed by re-rendering
+                console.log('Recent applications visible');
+            }
+        });
+    }
+
+    // Refresh recommended skills based on job market demand
+    function refreshRecommendedSkills() {
+        const container = document.getElementById('recommendedSkillsContainer');
+        if (!container) return;
+
+        fetch('/api/job-seeker/recommended-skills')
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch');
+                return response.json();
+            })
+            .then(data => {
+                const skills = data.recommendedSkills || [];
+                
+                if (skills.length === 0) {
+                    container.innerHTML = '<div class="text-center py-5"><p class="text-dark mb-0"><i class="bi bi-info-circle me-2"></i>No recommendations available yet</p></div>';
+                    return;
+                }
+
+                let html = '';
+                skills.forEach((skill, index) => {
+                    const badgeColor = skill.count >= 5 ? 'danger' : (skill.count >= 3 ? 'warning' : 'info');
+                    
+                    html += `
+                        <div class="recommendation-item mb-2 p-3 rounded bg-white border-start border-4 border-${badgeColor}">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="badge bg-${badgeColor} text-white fw-semibold" style="font-size: 0.9rem;">${skill.name}</span>
+                                <small class="text-muted fw-semibold">In ${skill.count} job${skill.count > 1 ? 's' : ''}</small>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+                console.log('Recommended skills updated:', skills);
+            })
+            .catch(error => {
+                console.error('Error refreshing recommended skills:', error);
+                container.innerHTML = '<p class="text-danger text-center py-4"><i class="bi bi-exclamation-circle me-2"></i>Error loading recommendations</p>';
+            });
+    }
+
+    // Refresh every 5 seconds if on job seeker dashboard
+    if (document.body.dataset.userRole === 'job_seeker') {
+        setInterval(refreshInterviewCount, 5000);
+        setInterval(refreshAverageMatchScore, 5000);
+        setInterval(refreshRecommendedSkills, 5000);
+        
+        // Also refresh when page becomes visible
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                console.log('Page is visible, refreshing job seeker stats');
+                refreshInterviewCount();
+                refreshAverageMatchScore();
+                refreshRecommendedSkills();
+            }
+        });
+
+        // Initial refresh on page load
+        refreshInterviewCount();
+        refreshAverageMatchScore();
+        refreshRecommendedSkills();
+    }
+
+    // Handle Add Skill button click
+    document.getElementById('addSkillBtn').addEventListener('click', async function() {
+        const skillName = document.getElementById('skillName').value.trim();
+        const skillCategory = document.getElementById('skillCategory').value.trim();
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+        if (!skillName) {
+            alert('Please enter a skill name');
+            return;
+        }
+
+        try {
+            this.disabled = true;
+            const originalText = this.innerHTML;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
+
+            const requestBody = {
+                skill_name: skillName
+            };
+            
+            // Only include category if user explicitly provided one
+            if (skillCategory) {
+                requestBody.category = skillCategory;
+            }
+
+            const response = await fetch('/api/skills', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to add skill');
+            }
+
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('addSkillModal')).hide();
+            
+            // Clear form
+            document.getElementById('addSkillForm').reset();
+
+            // Refresh skills profile
+            refreshSkillsProfile();
+            
+            // Refresh average match score
+            refreshAverageMatchScore();
+
+            // Refresh recommended skills
+            refreshRecommendedSkills();
+
+            alert('Skill added successfully!');
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error adding skill: ' + error.message);
+        } finally {
+            this.disabled = false;
+            this.innerHTML = originalText;
+        }
+    });
+
+    // Refresh skills profile dynamically
+    function refreshSkillsProfile() {
+        fetch('/api/skills/by-category')
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch');
+                return response.json();
+            })
+            .then(data => {
+                const skillsContainer = document.getElementById('skillsContainer');
+                if (!skillsContainer) return;
+
+                let html = '';
+                const skillsByCategory = data.skillsByCategory;
+
+                if (Object.keys(skillsByCategory).length === 0) {
+                    html = '<div class="alert alert-info mb-0"><i class="bi bi-info-circle me-2"></i>No skills added yet. Click "Add Skill" to get started!</div>';
+                } else {
+                    for (const [category, skills] of Object.entries(skillsByCategory)) {
+                        html += `
+                            <div class="mb-4 skill-category" data-category="${category}">
+                                <div class="px-3 py-2 bg-light border-start border-4 border-primary rounded-lg d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold text-dark">${category}</span>
+                                    <span class="badge bg-primary text-light border-0">${skills.length}</span>
+                                </div>
+                                <div class="pt-2 px-1 skill-badges">
+                                    ${skills.map(skill => `
+                                        <span class="badge bg-primary me-2 mb-2 py-2 px-3" style="font-size: 0.85rem;">
+                                            ${skill.name}
+                                            <i class="bi bi-x-circle ms-1 cursor-pointer remove-skill" data-skill="${skill.name}" style="cursor: pointer;"></i>
+                                        </span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                skillsContainer.innerHTML = html;
+                console.log('Skills profile updated');
+
+                // Attach remove skill listeners
+                document.querySelectorAll('.remove-skill').forEach(btn => {
+                    btn.addEventListener('click', removeSkill);
+                });
+            })
+            .catch(error => console.error('Error refreshing skills profile:', error));
+    }
+
+    // Handle remove skill
+    function removeSkill(e) {
+        const skillName = e.target.dataset.skill;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+        if (!confirm(`Remove skill "${skillName}"?`)) return;
+
+        fetch('/api/skills', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ skill_name: skillName })
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to remove skill');
+            return response.json();
+        })
+        .then(data => {
+            refreshSkillsProfile();
+            refreshAverageMatchScore();
+            console.log('Skill removed:', skillName);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error removing skill: ' + error.message);
+        });
+    }
+
+    // Attach remove skill listeners on page load
+    document.querySelectorAll('.remove-skill').forEach(btn => {
+        btn.addEventListener('click', removeSkill);
+    });
+
+    // Handle logout button
+    document.getElementById('logoutBtn').addEventListener('click', function() {
+        console.log('Logout button clicked');
+        const modalElement = document.getElementById('logoutConfirmModal');
+        if (modalElement) {
+            console.log('Modal element found');
+            // Use Bootstrap's native modal show method
+            modalElement.classList.add('show');
+            modalElement.style.display = 'block';
+            modalElement.setAttribute('aria-modal', 'true');
+            modalElement.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('modal-open');
+            
+            // Add backdrop
+            const backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop fade show';
+            backdrop.id = 'modal-backdrop';
+            document.body.appendChild(backdrop);
+        } else {
+            console.error('Modal element not found');
+        }
+    });
+
+    // Function to close modal
+    function closeLogoutModal() {
+        console.log('Closing modal');
+        const modalElement = document.getElementById('logoutConfirmModal');
+        const backdrop = document.getElementById('modal-backdrop');
+        
+        if (modalElement) {
+            modalElement.classList.remove('show');
+            modalElement.style.display = 'none';
+            modalElement.setAttribute('aria-modal', 'false');
+            modalElement.setAttribute('aria-hidden', 'true');
+        }
+        
+        if (backdrop) {
+            backdrop.remove();
+        }
+        
+        document.body.classList.remove('modal-open');
+    }
+
+    // Function to confirm logout
+    function confirmLogout() {
+        console.log('Logout confirmation clicked');
+        closeLogoutModal();
+        
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ route("logout") }}';
+        form.style.display = 'none';
+        
+        // Add CSRF token
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_token';
+        csrfInput.value = '{{ csrf_token() }}';
+        
+        form.appendChild(csrfInput);
+        document.body.appendChild(form);
+        console.log('Submitting logout form');
+        form.submit();
+    }
+
+    // Function to show role switch modal
+    function showRoleSwitchModal(targetRole) {
+        const currentRole = '{{ $role }}';
+        
+        // Don't show modal if clicking current role
+        if (targetRole === currentRole) {
+            return;
+        }
+
+        const roleLabel = targetRole === 'job_seeker' ? 'Job Seeker' : 'Employer';
+        const message = `Log in as ${roleLabel} to access`;
+        
+        // Set message and target role
+        document.getElementById('roleSwitchMessage').textContent = message;
+        document.getElementById('roleSwitchConfirmBtn').setAttribute('onclick', `redirectToLogin('${targetRole}')`);
+        
+        // Show modal
+        const modalElement = document.getElementById('roleSwitchModal');
+        modalElement.classList.add('show');
+        modalElement.style.display = 'block';
+        modalElement.setAttribute('aria-modal', 'true');
+        modalElement.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+        
+        // Add backdrop
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop fade show';
+        backdrop.id = 'role-switch-backdrop';
+        document.body.appendChild(backdrop);
+    }
+
+    // Function to close role switch modal
+    function closeRoleSwitchModal() {
+        const modalElement = document.getElementById('roleSwitchModal');
+        const backdrop = document.getElementById('role-switch-backdrop');
+        
+        if (modalElement) {
+            modalElement.classList.remove('show');
+            modalElement.style.display = 'none';
+            modalElement.setAttribute('aria-modal', 'false');
+            modalElement.setAttribute('aria-hidden', 'true');
+        }
+        
+        if (backdrop) {
+            backdrop.remove();
+        }
+        
+        document.body.classList.remove('modal-open');
+    }
+
+    // Function to redirect to login with role
+    function redirectToLogin(role) {
+        closeRoleSwitchModal();
+        window.location.href = `{{ route('login') }}?role=${role}`;
+    }
+    </script>
+
+    <!-- Logout Confirmation Modal -->
+    <div class="modal fade" id="logoutConfirmModal" tabindex="-1" aria-labelledby="logoutConfirmLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="logoutConfirmLabel">Confirm Logout</h5>
+                    <button type="button" class="btn-close btn-close-white" onclick="closeLogoutModal()" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to log out?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeLogoutModal()">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmLogout()">Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Role Switch Modal -->
+    <div class="modal fade" id="roleSwitchModal" tabindex="-1" aria-labelledby="roleSwitchLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="roleSwitchLabel">Switch Role</h5>
+                    <button type="button" class="btn-close btn-close-white" onclick="closeRoleSwitchModal()" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="roleSwitchMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="roleSwitchConfirmBtn">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
 

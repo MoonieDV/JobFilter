@@ -4,11 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Application;
 use App\Models\Job;
+use App\Services\JobViewService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class JobBrowserController extends Controller
 {
+    public function __construct(private JobViewService $jobViewService) {}
+
     public function index(Request $request)
     {
         $filters = $request->only(['q', 'location', 'employment_type']);
@@ -53,13 +56,52 @@ class JobBrowserController extends Controller
         ]);
     }
 
-    public function show(Job $job)
+    public function show(Job $job, Request $request)
     {
         if ($job->status !== 'open' && ! $this->canViewClosedJob($job)) {
             abort(404);
         }
 
+        // Record the job view
+        $this->jobViewService->recordView($job, $request);
+
         return view('jobs.show', compact('job'));
+    }
+
+    public function apiShow(Job $job, Request $request)
+    {
+        if ($job->status !== 'open' && ! $this->canViewClosedJob($job)) {
+            abort(404);
+        }
+
+        // Record the job view
+        $this->jobViewService->recordView($job, $request);
+
+        return response()->json([
+            'job' => [
+                'id' => $job->id,
+                'title' => $job->title,
+                'company_name' => $job->company_name,
+                'location' => $job->location,
+                'employment_type' => $job->employment_type,
+                'experience_level' => $job->experience_level,
+                'salary' => $job->salary,
+                'description' => $job->description,
+                'responsibilities' => $job->responsibilities,
+                'requirements' => $job->requirements,
+                'required_skills' => $job->required_skills ?? [],
+                'preferred_skills' => $job->preferred_skills ?? [],
+                'status' => $job->status,
+                'published_at' => $job->published_at,
+            ],
+        ]);
+    }
+
+    public function getViews(Job $job)
+    {
+        return response()->json([
+            'views' => $this->jobViewService->getJobViewsCount($job),
+        ]);
     }
 
     protected function canViewClosedJob(Job $job): bool

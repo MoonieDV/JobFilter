@@ -59,7 +59,7 @@ class JobController extends Controller
         $this->ensureEmployer();
         $this->authorizeJob($job);
 
-        return view('employer.jobs.edit', compact('job'));
+        return view('legacy.edit-job', compact('job'));
     }
 
     public function update(Request $request, Job $job)
@@ -96,6 +96,43 @@ class JobController extends Controller
         $job->delete();
 
         return redirect()->route('employer.jobs.index')->with('status', 'Job removed.');
+    }
+
+    public function apiUpdate(Request $request, Job $job)
+    {
+        $this->ensureEmployer();
+        $this->authorizeJob($job);
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'location' => 'required|string|max:255',
+            'employment_type' => 'required|string|max:50',
+            'experience_level' => 'nullable|string|max:50',
+            'salary' => 'nullable|numeric|min:0',
+            'description' => 'required|string',
+            'responsibilities' => 'nullable|string',
+            'requirements' => 'nullable|string',
+            'required_skills' => 'nullable|array',
+            'preferred_skills' => 'nullable|array',
+        ]);
+
+        $job->update([
+            'title' => $validated['title'],
+            'location' => $validated['location'],
+            'employment_type' => $validated['employment_type'],
+            'experience_level' => $validated['experience_level'] ?? null,
+            'salary' => $validated['salary'] ?? null,
+            'description' => $validated['description'],
+            'responsibilities' => $validated['responsibilities'] ?? null,
+            'requirements' => $validated['requirements'] ?? null,
+            'required_skills' => $validated['required_skills'] ?? null,
+            'preferred_skills' => $validated['preferred_skills'] ?? null,
+        ]);
+
+        return response()->json([
+            'status' => 'Job updated successfully',
+            'job' => $job,
+        ]);
     }
 
     protected function validateJob(Request $request): array

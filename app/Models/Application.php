@@ -20,12 +20,15 @@ class Application extends Model
         'status',
         'match_score',
         'applied_at',
+        'interview_scheduled_at',
+        'interview_type',
     ];
 
     protected $casts = [
         'extracted_skills' => 'array',
         'match_score' => 'decimal:2',
         'applied_at' => 'datetime',
+        'interview_scheduled_at' => 'datetime',
     ];
 
     public function job()
@@ -46,5 +49,10 @@ class Application extends Model
     public function questions()
     {
         return $this->hasMany(ApplicationQuestion::class);
+    }
+
+    public function interviewSchedule()
+    {
+        return $this->hasOne(InterviewSchedule::class);
     }
 }

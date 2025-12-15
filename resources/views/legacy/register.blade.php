@@ -11,20 +11,22 @@
 </head>
 <body>
     <div class="bg-overlay"></div>
-    <div class="container mt-5">
+    <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-6 col-lg-5">
-                <div class="card shadow">
-                    <div class="card-body p-4">
-                        <h3 class="card-title text-center mb-4">Sign Up to JobFilter</h3>
+            <div class="col-md-6 col-lg-5" style="width: 100%; max-width: 500px;">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="card-title text-center mb-2">Create Your Account</h3>
+                        <p class="text-center text-muted mb-4" style="font-size: 14px;">Join JobFilter and start your journey</p>
 
                         <div class="mb-4">
-                            <div class="d-flex justify-content-center gap-4">
-                                <div id="employeeCard" class="role-card selected" onclick="selectRole('employee')">
+                            <label class="form-label d-block mb-3">I am a...</label>
+                            <div class="d-flex justify-content-center gap-3">
+                                <div id="employeeCard" class="role-card selected" onclick="selectRole('employee')" role="button" tabindex="0">
                                     <i class="bi bi-person"></i>
-                                    <div>Employee</div>
+                                    <div>Job Seeker</div>
                                 </div>
-                                <div id="employerCard" class="role-card" onclick="selectRole('employer')">
+                                <div id="employerCard" class="role-card" onclick="selectRole('employer')" role="button" tabindex="0">
                                     <i class="bi bi-building"></i>
                                     <div>Employer</div>
                                 </div>
@@ -51,13 +53,9 @@
                                 <input type="email" class="form-control" id="email" name="email" value="{{ old('email') }}" placeholder="Enter email" required>
                             </div>
 
-                            <div class="row g-3 align-items-center">
-                                <div class="col-auto">
-                                    <label for="password" class="col-form-label">Password</label>
-                                </div>
-                                <div class="col-auto flex-grow-1">
-                                    <input type="password" id="password" name="password" class="form-control" placeholder="At least 6 characters" required>
-                                </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password</label>
+                                <input type="password" id="password" name="password" class="form-control" placeholder="At least 6 characters" required>
                             </div>
 
                             <div id="employeeFields">
@@ -78,9 +76,9 @@
                                     <textarea class="form-control" id="bio" name="bio" rows="3" placeholder="Tell us a little about yourself">{{ old('bio') }}</textarea>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="resume" class="form-label">Upload Resume (PDF or DOCX)</label>
-                                    <input type="file" class="form-control" id="resume" name="resume" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-                                    <div class="form-text">Supported formats: PDF, DOCX, DOC.</div>
+                                    <label for="resume" class="form-label">Upload Resume (DOCX)</label>
+                                    <input type="file" class="form-control" id="resume" name="resume" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                                    <div class="form-text">Supported format: DOCX only.</div>
                                 </div>
                             </div>
 
