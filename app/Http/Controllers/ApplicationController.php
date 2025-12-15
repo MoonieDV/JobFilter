@@ -6,6 +6,7 @@ use App\Models\Application;
 use App\Models\Job;
 use App\Models\Notification;
 use App\Services\SkillExtractionService;
+use App\Services\ApplicationScoringService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -133,6 +134,9 @@ class ApplicationController extends Controller
             'applied_at' => now(),
         ]);
 
+        // Calculate and store match score
+        $this->calculateAndStoreMatchScore($application);
+
         Notification::create([
             'user_id' => $job->posted_by,
             'title' => 'New application received',
@@ -216,6 +220,17 @@ class ApplicationController extends Controller
             if (! empty($skills)) {
                 $skillExtractor->persist($userId, $skills);
             }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    protected function calculateAndStoreMatchScore(Application $application): void
+    {
+        try {
+            $scoringService = app(ApplicationScoringService::class);
+            $matchScore = $scoringService->calculateMatchScore($application);
+            $application->update(['match_score' => $matchScore]);
         } catch (\Throwable $e) {
             report($e);
         }

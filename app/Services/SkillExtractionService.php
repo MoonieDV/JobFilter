@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Skill;
 use App\Models\UserSkill;
+use App\Models\SkillTrainingData;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
@@ -16,6 +17,7 @@ class SkillExtractionService
 
     public function __construct(private readonly Parser $pdfParser)
     {
+        // Get skills from database
         $this->skills = Skill::query()
             ->orderByDesc('popularity_score')
             ->pluck('name')
@@ -33,13 +35,42 @@ class SkillExtractionService
             default => file_get_contents($absolutePath) ?: '',
         };
 
-        $text = strtolower($text);
+        $textLower = strtolower($text);
 
-        return $this->skills
-            ->filter(fn ($skill) => str_contains($text, strtolower($skill)))
+        // Get all skills to search for (database + training data)
+        $allSkills = $this->getAllSkillsForExtraction();
+
+        $foundSkills = $allSkills
+            ->filter(function ($skill) use ($textLower) {
+                $skillLower = strtolower($skill);
+                // Simple case-insensitive substring match
+                return str_contains($textLower, $skillLower);
+            })
             ->unique()
             ->values()
             ->all();
+
+        return $foundSkills;
+    }
+
+    private function getAllSkillsForExtraction(): Collection
+    {
+        // Get skills from training data (manually added skills by all users)
+        $trainingSkills = collect();
+        try {
+            $trainingSkills = SkillTrainingData::query()
+                ->orderByDesc('frequency')
+                ->pluck('skill_name');
+        } catch (\Throwable $e) {
+            // If training data table doesn't exist yet, just use regular skills
+            report($e);
+        }
+
+        // Merge both collections, prioritizing training data (higher frequency first)
+        return $trainingSkills
+            ->merge($this->skills)
+            ->unique()
+            ->values();
     }
 
     public function persist(int $userId, array $skills): void
