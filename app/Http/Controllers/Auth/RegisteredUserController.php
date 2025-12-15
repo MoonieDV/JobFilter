@@ -35,9 +35,10 @@ class RegisteredUserController extends Controller
             $roleInput = strtolower((string) $request->input('role', 'employee'));
             $role = in_array($roleInput, ['employer', 'admin'], true) ? 'employer' : 'job_seeker';
 
-<<<<<<< HEAD
             $rules = [
-                'name' => ['required', 'string', 'max:255'],
+                'first_name' => ['required', 'string', 'max:255'],
+                'middle_name' => ['nullable', 'string', 'max:255'],
+                'last_name' => ['required', 'string', 'max:255'],
                 'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
                 'password' => ['required', Rules\Password::defaults()],
                 'role' => ['required', 'string'],
@@ -49,7 +50,7 @@ class RegisteredUserController extends Controller
                     'phone' => ['required', 'string', 'max:30'],
                     'dob' => ['required', 'date', 'before:today'],
                     'bio' => ['nullable', 'string'],
-                    'resume' => ['nullable', 'file', 'mimes:docx', 'max:5120'],
+                    'resume' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
                 ]);
             } else {
                 $rules = array_merge($rules, [
@@ -59,82 +60,17 @@ class RegisteredUserController extends Controller
                     'company_phone' => ['required', 'string', 'max:30'],
                     'company_linkedin' => ['nullable', 'url', 'max:255'],
                 ]);
-=======
-        $rules = [
-            'first_name' => ['required', 'string', 'max:255'],
-            'middle_name' => ['nullable', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'password' => ['required', Rules\Password::defaults()],
-            'role' => ['required', 'string'],
-        ];
-
-        if ($role === 'job_seeker') {
-            $rules = array_merge($rules, [
-                'job_title' => ['nullable', 'string', 'max:255'],
-                'phone' => ['required', 'string', 'max:30'],
-                'dob' => ['required', 'date', 'before:today'],
-                'bio' => ['nullable', 'string'],
-                'resume' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
-            ]);
-        } else {
-            $rules = array_merge($rules, [
-                'company_name' => ['required', 'string', 'max:255'],
-                'company_reg_number' => ['required', 'string', 'max:100'],
-                'company_address' => ['required', 'string', 'max:255'],
-                'company_phone' => ['required', 'string', 'max:30'],
-                'company_linkedin' => ['nullable', 'url', 'max:255'],
-            ]);
-        }
-
-        $validated = $request->validate($rules);
-
-        // Build a full name string for legacy uses
-        $fullNameParts = array_filter([
-            $validated['first_name'] ?? null,
-            $validated['middle_name'] ?? null,
-            $validated['last_name'] ?? null,
-        ]);
-        $fullName = implode(' ', $fullNameParts);
-
-        $resumePath = null;
-        if ($role === 'job_seeker' && $request->hasFile('resume')) {
-            $resumePath = $resumeStorage->store($request->file('resume'));
-        }
-
-        $user = User::create([
-            'name' => $fullName,
-            'firstname' => $validated['first_name'],
-            'lastname' => $validated['last_name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'role' => $role,
-            'job_title' => $validated['job_title'] ?? null,
-            'phone' => $validated['phone'] ?? null,
-            'dob' => $validated['dob'] ?? null,
-            'bio' => $validated['bio'] ?? null,
-            'resume_path' => $resumePath,
-            'company_name' => $validated['company_name'] ?? null,
-            'company_reg_number' => $validated['company_reg_number'] ?? null,
-            'company_address' => $validated['company_address'] ?? null,
-            'company_phone' => $validated['company_phone'] ?? null,
-            'company_linkedin' => $validated['company_linkedin'] ?? null,
-        ]);
-
-        event(new Registered($user));
-
-        if ($resumePath) {
-            try {
-                $skills = $skillExtractor->extract($resumePath);
-                if (! empty($skills)) {
-                    $skillExtractor->persist($user->id, $skills);
-                }
-            } catch (\Throwable $e) {
-                report($e);
->>>>>>> 7cf78cb6cbd681ee1709eec3ca007c8f16eb5b9d
             }
 
             $validated = $request->validate($rules);
+
+            // Build a full name string for legacy uses
+            $fullNameParts = array_filter([
+                $validated['first_name'] ?? null,
+                $validated['middle_name'] ?? null,
+                $validated['last_name'] ?? null,
+            ]);
+            $fullName = implode(' ', $fullNameParts);
 
             $resumePath = null;
             if ($role === 'job_seeker' && $request->hasFile('resume')) {
@@ -147,7 +83,10 @@ class RegisteredUserController extends Controller
             }
 
             $user = User::create([
-                'name' => $validated['name'],
+                'name' => $fullName,
+                'firstname' => $validated['first_name'],
+                'lastname' => $validated['last_name'],
+                'middlename' => $validated['middle_name'] ?? null,
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
                 'role' => $role,
