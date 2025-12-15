@@ -37,11 +37,12 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
 RUN mkdir -p storage/logs storage/app/public \
     && chmod -R 775 storage bootstrap/cache
 
-# Generate app key
-RUN php artisan key:generate --force
-
 # Expose port
 EXPOSE 8000
 
+# Set environment variables for production
+ENV APP_ENV=production
+ENV APP_DEBUG=false
+
 # Run migrations and start server
-CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000
+CMD sh -c "if [ ! -f .env ]; then cp .env.example .env; fi && php artisan key:generate --force && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"

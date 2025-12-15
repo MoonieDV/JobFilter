@@ -13,6 +13,22 @@ services:
         value: stderr
       - key: DB_CONNECTION
         value: pgsql
+      - key: DB_HOST
+        value: db.ubbatwwqdndhlfviclwr.supabase.co
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_DATABASE
+        value: postgres
+      - key: DB_USERNAME
+        value: postgres
+      - key: DB_PASSWORD
+        value: phplaravel99
+      - key: SUPABASE_URL
+        value: https://ubbatwwqdndhlfviclwr.supabase.co
+      - key: SUPABASE_KEY
+        value: sb_publishable_Co5DWyHPbkflspKuYg-J9w_eccoeKsB
+      - key: SUPABASE_SECRET_KEY
+        value: sb_secret_3EE2PlEhyDkBhgH36TTKLA_H080uTKv
       - key: QUEUE_CONNECTION
         value: sync
       - key: SESSION_DRIVER
