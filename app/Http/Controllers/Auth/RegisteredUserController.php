@@ -36,13 +36,9 @@ class RegisteredUserController extends Controller
             $role = in_array($roleInput, ['employer', 'admin'], true) ? 'employer' : 'job_seeker';
 
             $rules = [
-<<<<<<< HEAD
-                'name' => ['required', 'string', 'max:255'],
-=======
                 'first_name' => ['required', 'string', 'max:255'],
                 'middle_name' => ['nullable', 'string', 'max:255'],
                 'last_name' => ['required', 'string', 'max:255'],
->>>>>>> da14b5dabf3a1172b765aee141cb3cacec9124f3
                 'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
                 'password' => ['required', Rules\Password::defaults()],
                 'role' => ['required', 'string'],
@@ -54,11 +50,7 @@ class RegisteredUserController extends Controller
                     'phone' => ['required', 'string', 'max:30'],
                     'dob' => ['required', 'date', 'before:today'],
                     'bio' => ['nullable', 'string'],
-<<<<<<< HEAD
-                    'resume' => ['nullable', 'file', 'mimes:docx', 'max:5120'],
-=======
                     'resume' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
->>>>>>> da14b5dabf3a1172b765aee141cb3cacec9124f3
                 ]);
             } else {
                 $rules = array_merge($rules, [
@@ -72,8 +64,6 @@ class RegisteredUserController extends Controller
 
             $validated = $request->validate($rules);
 
-<<<<<<< HEAD
-=======
             // Build a full name string for legacy uses
             $fullNameParts = array_filter([
                 $validated['first_name'] ?? null,
@@ -81,8 +71,6 @@ class RegisteredUserController extends Controller
                 $validated['last_name'] ?? null,
             ]);
             $fullName = implode(' ', $fullNameParts);
-
->>>>>>> da14b5dabf3a1172b765aee141cb3cacec9124f3
             $resumePath = null;
             if ($role === 'job_seeker' && $request->hasFile('resume')) {
                 try {
@@ -94,14 +82,10 @@ class RegisteredUserController extends Controller
             }
 
             $user = User::create([
-<<<<<<< HEAD
-                'name' => $validated['name'],
-=======
                 'name' => $fullName,
                 'firstname' => $validated['first_name'],
                 'lastname' => $validated['last_name'],
                 'middlename' => $validated['middle_name'] ?? null,
->>>>>>> da14b5dabf3a1172b765aee141cb3cacec9124f3
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
                 'role' => $role,
