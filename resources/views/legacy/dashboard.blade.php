@@ -130,11 +130,7 @@
                         <div class="card stat-card text-center" data-stat="avg-match-score">
                             <div class="card-body">
                                 <div class="stat-icon mb-2">📈</div>
-<<<<<<< HEAD
-                                <h3 class="stat-number" id="avgMatchScoreCount">0%</h3>
-=======
                                 <h3 class="stat-number">{{ $averageMatchScore }}%</h3>
->>>>>>> da14b5dabf3a1172b765aee141cb3cacec9124f3
                                 <p class="stat-label">Avg. Match Score</p>
                             </div>
                         </div>
@@ -143,11 +139,7 @@
                         <div class="card stat-card text-center" data-stat="responses">
                             <div class="card-body">
                                 <div class="stat-icon mb-2">📧</div>
-<<<<<<< HEAD
-                                <h3 class="stat-number" id="responsesCount">0</h3>
-=======
                                 <h3 class="stat-number">{{ $responsesCount }}</h3>
->>>>>>> da14b5dabf3a1172b765aee141cb3cacec9124f3
                                 <p class="stat-label">Responses</p>
                             </div>
                         </div>
@@ -202,15 +194,7 @@
                                     <small class="text-white-50">High-demand skills in your market</small>
                                 </div>
                             </div>
-<<<<<<< HEAD
-                            <div class="card-body overflow-auto" id="recommendedSkillsContainer" style="max-height: 350px;">
-                                <div class="text-center py-4">
-                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                        <span class="visually-hidden">Loading...</span>
-                                    </div>
-                                </div>
-=======
-                            <div class="card-body">
+<div class="card-body">
                                 @forelse ($recommendedSkills as $skill)
                                     <div class="recommendation-item mb-2">
                                         <span class="badge bg-warning me-2">{{ $skill }}</span>
@@ -219,7 +203,6 @@
                                 @empty
                                     <div class="text-muted small">No skills data available from job posts yet.</div>
                                 @endforelse
->>>>>>> da14b5dabf3a1172b765aee141cb3cacec9124f3
                             </div>
                         </div>
                     </div>
@@ -470,14 +453,10 @@
                                                                                     <i class="bi bi-calendar-check me-1"></i>Scheduled
                                                                                 </button>
                                                                             @else
-<<<<<<< HEAD
-                                                                                <button type="button" class="btn btn-sm btn-primary btn-interview" data-application-id="{{ $application->id }}">
-=======
-                                                                                <button type="button" class="btn btn-sm btn-primary btn-schedule-interview" 
+<button type="button" class="btn btn-sm btn-primary btn-schedule-interview" 
                                                                                         data-app-id="{{ $application->id }}" 
                                                                                         data-applicant-name="{{ $applicantName }}"
                                                                                         data-job-title="{{ $job->title }}">
->>>>>>> da14b5dabf3a1172b765aee141cb3cacec9124f3
                                                                                     <i class="bi bi-calendar-plus me-1"></i>Interview
                                                                                 </button>
                                                                             @endif
