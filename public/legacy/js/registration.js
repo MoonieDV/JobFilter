@@ -5,15 +5,18 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function selectRole(role) {
+    // Normalize role value
+    const normalizedRole = (role === 'employee' || role === 'job_seeker') ? 'job_seeker' : 'employer';
+    
     // Update the hidden input value
-    document.getElementById('role').value = role;
+    document.getElementById('role').value = normalizedRole;
 
     const employeeCard = document.getElementById('employeeCard');
     const employerCard = document.getElementById('employerCard');
     const employeeFields = document.getElementById('employeeFields');
     const employerFields = document.getElementById('employerFields');
 
-    if (role === 'employee') {
+    if (normalizedRole === 'job_seeker') {
         employeeCard.classList.add('selected');
         employerCard.classList.remove('selected');
         employeeFields.style.display = 'block';
@@ -38,8 +41,8 @@ function selectRole(role) {
     }
     
     // Store the selected role for form submission
-    window.selectedRole = role;
-    console.log('Role selected:', role);
+    window.selectedRole = normalizedRole;
+    console.log('Role selected:', normalizedRole);
     
     // Add smooth transitions
     employeeCard.style.transition = 'all 0.3s ease';
@@ -101,7 +104,7 @@ document.getElementById('registrationForm').addEventListener('submit', function 
         password.classList.remove('is-invalid');
     }
 
-    if (role === 'employee') {
+    if (role === 'employee' || role === 'job_seeker') {
         const employeePhone = document.getElementById('employeePhone');
         const dob = document.getElementById('dob');
         const resume = document.getElementById('resume');
@@ -122,11 +125,8 @@ document.getElementById('registrationForm').addEventListener('submit', function 
             dob.classList.remove('is-invalid');
         }
 
-        // Resume required and file type check
-        if (resume.files.length === 0) {
-            resume.classList.add('is-invalid');
-            isValid = false;
-        } else {
+        // Resume is optional, but if provided, validate file type
+        if (resume.files.length > 0) {
             const allowedExtensions = ['pdf', 'doc', 'docx'];
             const fileName = resume.files[0].name.toLowerCase();
             const extension = fileName.split('.').pop();
@@ -136,6 +136,8 @@ document.getElementById('registrationForm').addEventListener('submit', function 
             } else {
                 resume.classList.remove('is-invalid');
             }
+        } else {
+            resume.classList.remove('is-invalid');
         }
 
         // jobTitle and bio are optional, no validation required

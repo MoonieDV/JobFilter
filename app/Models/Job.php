@@ -41,6 +41,11 @@ class Job extends Model
         return $this->hasMany(Application::class);
     }
 
+    public function views()
+    {
+        return $this->hasMany(JobView::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'open');
