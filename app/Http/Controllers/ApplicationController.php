@@ -31,7 +31,6 @@ class ApplicationController extends Controller
     {
         $user = $request->user();
 
-        // Authorization: employer can view their own job's applications, applicant can view their own applications
         if ($user->role === 'employer') {
             if ($application->employer_id !== $user->id) {
                 abort(403, 'Unauthorized');
@@ -45,24 +44,22 @@ class ApplicationController extends Controller
         $application->load(['job', 'applicant']);
 
         if ($request->expectsJson()) {
-            return response()->json([
-                'application' => [
-                    'id' => $application->id,
-                    'job_id' => $application->job_id,
-                    'job_title' => $application->job?->title,
-                    'full_name' => $application->full_name,
-                    'applicant_name' => $application->applicant?->name,
-                    'email' => $application->email,
-                    'applicant_email' => $application->applicant?->email,
-                    'phone' => $application->phone,
-                    'applicant_phone' => $application->applicant?->phone,
-                    'location' => $application->location,
-                    'resume_path' => $application->resume_path,
-                    'cover_letter' => $application->cover_letter,
-                    'status' => $application->status,
-                    'applied_at' => $application->applied_at,
-                ],
-            ]);
+            return response()->json(['application' => [
+                'id' => $application->id,
+                'job_id' => $application->job_id,
+                'job_title' => $application->job?->title,
+                'full_name' => $application->full_name,
+                'applicant_name' => $application->applicant?->name,
+                'email' => $application->email,
+                'applicant_email' => $application->applicant?->email,
+                'phone' => $application->phone,
+                'applicant_phone' => $application->applicant?->phone,
+                'location' => $application->location,
+                'resume_path' => $application->resume_path,
+                'cover_letter' => $application->cover_letter,
+                'status' => $application->status,
+                'applied_at' => $application->applied_at,
+            ]]);
         }
 
         return view('applications.show', compact('application'));
@@ -74,7 +71,6 @@ class ApplicationController extends Controller
             $skillExtractor = app(SkillExtractionService::class);
         }
 
-        // Handle both route patterns: POST /jobs/{job}/apply and POST /applications with job_id in body
         if ($job === null) {
             $jobId = $request->input('job_id');
             if (! $jobId) {
@@ -134,7 +130,6 @@ class ApplicationController extends Controller
             'applied_at' => now(),
         ]);
 
-        // Calculate and store match score
         $this->calculateAndStoreMatchScore($application);
 
         Notification::create([
@@ -178,7 +173,6 @@ class ApplicationController extends Controller
         $uploadedNewResume = false;
 
         if ($request->hasFile('resume')) {
-            // Delete old resume if it exists
             if ($application->resume_path) {
                 Storage::disk('public')->delete($application->resume_path);
             }
@@ -186,7 +180,6 @@ class ApplicationController extends Controller
             $user->update(['resume_path' => $resumePath]);
             $uploadedNewResume = true;
         } elseif ($request->boolean('use_saved_resume', false)) {
-            // Use the saved resume path from the request or user's current resume
             $savedPath = $request->input('saved_resume_path') ?: $user->resume_path;
             if ($savedPath) {
                 $resumePath = $savedPath;
@@ -234,6 +227,54 @@ class ApplicationController extends Controller
         } catch (\Throwable $e) {
             report($e);
         }
+    }
+
+    public function scheduleInterview(Request $request, Application $application)
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'employer' || $application->employer_id !== $user->id) {
+            abort(403, 'Unauthorized');
+        }
+
+        $request->validate([
+            'interview_date' => ['required', 'date', 'after:today'],
+            'interview_time' => ['required', 'string'],
+            'interview_type' => ['required', 'in:Online,Physical'],
+            'interview_location' => ['nullable', 'string', 'max:255', 'required_if:interview_type,Physical'],
+        ]);
+
+        $interviewDateTime = $request->input('interview_date') . ' ' . $request->input('interview_time');
+        $interviewType = $request->input('interview_type');
+        $interviewLocation = $request->input('interview_location');
+
+        $application->update(['status' => 'interview']);
+
+        $interviewMessage = "Hi! We would like to interview you on " . date('F j, Y \a\t g:i A', strtotime($interviewDateTime));
+        if ($interviewType === 'Online') {
+            $interviewMessage .= " (Online).";
+        } else {
+            $interviewMessage .= " (Physical) at " . ($interviewLocation ?? 'TBD') . ".";
+        }
+
+        Notification::create([
+            'user_id' => $application->applicant_id,
+            'title' => 'Interview Scheduled',
+            'message' => "Interview scheduled for {$application->job->title} position. {$interviewMessage}",
+            'type' => 'success',
+            'reference_id' => $application->id,
+            'reference_type' => Application::class,
+        ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'status' => 'Interview scheduled successfully!',
+                'message' => $interviewMessage,
+                'application' => $application->fresh(),
+            ], 200);
+        }
+
+        return back()->with('status', 'Interview scheduled successfully!');
     }
 
     public function destroy(Application $application)

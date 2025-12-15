@@ -44,8 +44,21 @@
                             <input type="hidden" id="role" name="role" value="{{ old('role', 'employee') }}">
 
                             <div class="mb-3">
-                                <label for="fullname" class="form-label">Full Name</label>
-                                <input type="text" class="form-control" id="fullname" name="name" value="{{ old('name') }}" placeholder="Enter your name" required>
+                                <label class="form-label">Name</label>
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <input type="text" class="form-control" id="first_name" name="first_name"
+                                               value="{{ old('first_name') }}" placeholder="First name" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="text" class="form-control" id="middle_name" name="middle_name"
+                                               value="{{ old('middle_name') }}" placeholder="Middle name (optional)">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="text" class="form-control" id="last_name" name="last_name"
+                                               value="{{ old('last_name') }}" placeholder="Last name" required>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="mb-3">
