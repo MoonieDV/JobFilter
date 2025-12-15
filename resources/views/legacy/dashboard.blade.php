@@ -5,8 +5,6 @@
     $skillsByCategory = collect($userSkillsWithCategories)
         ->groupBy(fn ($skill) => $skill['category'] ?? 'General')
         ->sortKeys();
-
-    $recommendedSkills = ['TypeScript', 'AWS', 'Docker'];
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -123,7 +121,7 @@
                         <div class="card stat-card text-center">
                             <div class="card-body">
                                 <div class="stat-icon mb-2">🎯</div>
-                                <h3 class="stat-number">{{ $latestJobs->count() }}</h3>
+                                <h3 class="stat-number">{{ $matchingJobsCount }}</h3>
                                 <p class="stat-label">New Matches</p>
                             </div>
                         </div>
@@ -132,7 +130,7 @@
                         <div class="card stat-card text-center" data-stat="avg-match-score">
                             <div class="card-body">
                                 <div class="stat-icon mb-2">📈</div>
-                                <h3 class="stat-number" id="avgMatchScoreCount">0%</h3>
+                                <h3 class="stat-number">{{ $averageMatchScore }}%</h3>
                                 <p class="stat-label">Avg. Match Score</p>
                             </div>
                         </div>
@@ -141,7 +139,7 @@
                         <div class="card stat-card text-center" data-stat="responses">
                             <div class="card-body">
                                 <div class="stat-icon mb-2">📧</div>
-                                <h3 class="stat-number" id="responsesCount">0</h3>
+                                <h3 class="stat-number">{{ $responsesCount }}</h3>
                                 <p class="stat-label">Responses</p>
                             </div>
                         </div>
@@ -196,12 +194,15 @@
                                     <small class="text-white-50">High-demand skills in your market</small>
                                 </div>
                             </div>
-                            <div class="card-body overflow-auto" id="recommendedSkillsContainer" style="max-height: 350px;">
-                                <div class="text-center py-4">
-                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                        <span class="visually-hidden">Loading...</span>
+                            <div class="card-body">
+                                @forelse ($recommendedSkills as $skill)
+                                    <div class="recommendation-item mb-2">
+                                        <span class="badge bg-warning me-2">{{ $skill }}</span>
+                                        <small class="text-muted">High demand in your area</small>
                                     </div>
-                                </div>
+                                @empty
+                                    <div class="text-muted small">No skills data available from job posts yet.</div>
+                                @endforelse
                             </div>
                         </div>
                     </div>
@@ -452,7 +453,10 @@
                                                                                     <i class="bi bi-calendar-check me-1"></i>Scheduled
                                                                                 </button>
                                                                             @else
-                                                                                <button type="button" class="btn btn-sm btn-primary btn-interview" data-application-id="{{ $application->id }}">
+                                                                                <button type="button" class="btn btn-sm btn-primary btn-schedule-interview" 
+                                                                                        data-app-id="{{ $application->id }}" 
+                                                                                        data-applicant-name="{{ $applicantName }}"
+                                                                                        data-job-title="{{ $job->title }}">
                                                                                     <i class="bi bi-calendar-plus me-1"></i>Interview
                                                                                 </button>
                                                                             @endif
@@ -725,6 +729,68 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="button" class="btn btn-primary" id="modalSubmitBtn">SUBMIT APPLICATION</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interview Scheduling Modal -->
+        <div class="modal fade" id="interviewModal" tabindex="-1" aria-labelledby="interviewModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="interviewModalLabel">Schedule Interview</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="interviewScheduleForm">
+                            <input type="hidden" id="interviewAppId" name="application_id">
+                            <div class="mb-3">
+                                <label for="interviewApplicantName" class="form-label">Applicant</label>
+                                <input type="text" id="interviewApplicantName" class="form-control" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label for="interviewJobTitle" class="form-label">Job Position</label>
+                                <input type="text" id="interviewJobTitle" class="form-control" readonly>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="interviewDate" class="form-label">Date <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="interviewDate" name="interview_date" required min="{{ date('Y-m-d', strtotime('+1 day')) }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="interviewTime" class="form-label">Time <span class="text-danger">*</span></label>
+                                    <input type="time" class="form-control" id="interviewTime" name="interview_time" required>
+                                </div>
+                            </div>
+                            <div class="mb-3 mt-3">
+                                <label class="form-label">Interview Type <span class="text-danger">*</span></label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="interview_type" id="interviewTypeOnline" value="Online" required>
+                                    <label class="form-check-label" for="interviewTypeOnline">
+                                        Online
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="interview_type" id="interviewTypePhysical" value="Physical" required>
+                                    <label class="form-check-label" for="interviewTypePhysical">
+                                        Physical
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="mb-3" id="interviewLocationWrap" style="display: none;">
+                                <label for="interviewLocation" class="form-label">Location <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="interviewLocation" name="interview_location" placeholder="Enter interview location">
+                            </div>
+                            <div class="alert alert-info mt-3 mb-0">
+                                <strong>Preview:</strong><br>
+                                <span id="interviewPreview">Hi! We would like to interview you...</span>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="interviewSubmitBtn">Schedule Interview</button>
                     </div>
                 </div>
             </div>
@@ -1237,6 +1303,142 @@
                 } finally {
                     modalSubmitBtn.textContent = originalText;
                     modalSubmitBtn.disabled = false;
+                }
+            });
+        }
+
+        // Interview Scheduling Modal
+        const interviewModalEl = document.getElementById('interviewModal');
+        const interviewModal = interviewModalEl ? new bootstrap.Modal(interviewModalEl) : null;
+        const interviewDateInput = document.getElementById('interviewDate');
+        const interviewTimeInput = document.getElementById('interviewTime');
+        const interviewTypeRadios = document.querySelectorAll('input[name="interview_type"]');
+        const interviewLocationWrap = document.getElementById('interviewLocationWrap');
+        const interviewLocationInput = document.getElementById('interviewLocation');
+        const interviewPreview = document.getElementById('interviewPreview');
+        const interviewSubmitBtn = document.getElementById('interviewSubmitBtn');
+
+        // Update preview when inputs change
+        function updateInterviewPreview() {
+            const date = interviewDateInput?.value;
+            const time = interviewTimeInput?.value;
+            const type = document.querySelector('input[name="interview_type"]:checked')?.value;
+            const location = interviewLocationInput?.value || '';
+
+            if (date && time && type) {
+                const dateObj = new Date(date + 'T' + time);
+                const formattedDate = dateObj.toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+                const formattedTime = dateObj.toLocaleTimeString('en-US', { 
+                    hour: 'numeric', 
+                    minute: '2-digit',
+                    hour12: true 
+                });
+
+                let preview = `Hi! We would like to interview you on ${formattedDate} at ${formattedTime}`;
+                if (type === 'Online') {
+                    preview += ' (Online).';
+                } else {
+                    preview += ` (Physical)${location ? ' at ' + location : ''}.`;
+                }
+                interviewPreview.textContent = preview;
+            } else {
+                interviewPreview.textContent = 'Hi! We would like to interview you...';
+            }
+        }
+
+        // Show/hide location field based on interview type
+        interviewTypeRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'Physical') {
+                    interviewLocationWrap.style.display = 'block';
+                    interviewLocationInput.required = true;
+                } else {
+                    interviewLocationWrap.style.display = 'none';
+                    interviewLocationInput.required = false;
+                    interviewLocationInput.value = '';
+                }
+                updateInterviewPreview();
+            });
+        });
+
+        if (interviewDateInput) interviewDateInput.addEventListener('change', updateInterviewPreview);
+        if (interviewTimeInput) interviewTimeInput.addEventListener('change', updateInterviewPreview);
+        if (interviewLocationInput) interviewLocationInput.addEventListener('input', updateInterviewPreview);
+
+        // Handle interview button clicks
+        document.querySelectorAll('.btn-schedule-interview').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const appId = this.dataset.appId;
+                const applicantName = this.dataset.applicantName;
+                const jobTitle = this.dataset.jobTitle;
+
+                document.getElementById('interviewAppId').value = appId;
+                document.getElementById('interviewApplicantName').value = applicantName;
+                document.getElementById('interviewJobTitle').value = jobTitle;
+
+                // Reset form
+                document.getElementById('interviewScheduleForm').reset();
+                interviewLocationWrap.style.display = 'none';
+                interviewLocationInput.required = false;
+                updateInterviewPreview();
+
+                interviewModal.show();
+            });
+        });
+
+        // Handle interview form submission
+        if (interviewSubmitBtn) {
+            interviewSubmitBtn.addEventListener('click', async function() {
+                const form = document.getElementById('interviewScheduleForm');
+                if (!form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
+
+                const appId = document.getElementById('interviewAppId').value;
+                const formData = new FormData(form);
+                const data = {
+                    interview_date: formData.get('interview_date'),
+                    interview_time: formData.get('interview_time'),
+                    interview_type: formData.get('interview_type'),
+                    interview_location: formData.get('interview_location') || null,
+                };
+
+                const originalText = this.textContent;
+                this.textContent = 'Scheduling...';
+                this.disabled = true;
+
+                try {
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
+                    const response = await fetch(`/applications/${appId}/schedule-interview`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify(data),
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        interviewModal.hide();
+                        alert('Interview scheduled successfully! The applicant has been notified.');
+                        setTimeout(() => location.reload(), 500);
+                    } else {
+                        const error = await response.json();
+                        alert('Failed to schedule interview: ' + (error.message || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Error scheduling interview:', error);
+                    alert('Error scheduling interview: ' + error.message);
+                } finally {
+                    this.textContent = originalText;
+                    this.disabled = false;
                 }
             });
         }
