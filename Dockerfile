@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y \
     git \
     curl \
     libpq-dev \
+    default-libmysqlclient-dev \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
@@ -12,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd pdo pdo_pgsql zip \
+    && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql pdo_pgsql zip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
@@ -44,5 +45,8 @@ EXPOSE 8000
 ENV APP_ENV=production
 ENV APP_DEBUG=false
 
-# Run migrations and start server
-CMD sh -c "if [ ! -f .env ]; then cp .env.example .env; fi && php artisan key:generate --force && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"
+# Run migrations and start server (guard .env.example, use $PORT and tolerate migrate failures)
+CMD sh -c "if [ ! -f .env ]; then if [ -f .env.example ]; then cp .env.example .env; fi; fi && \
+    if [ -z \"$${APP_KEY}\" ]; then php artisan key:generate --force; fi && \
+    php artisan migrate --force || true && \
+    php artisan serve --host=0.0.0.0 --port=${PORT:-8000}"
