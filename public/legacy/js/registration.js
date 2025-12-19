@@ -78,16 +78,27 @@ document.getElementById('registrationForm').addEventListener('submit', function 
     
     console.log('Form submitting with role:', role);
 
-    // Common fields
-    const fullname = document.getElementById('fullname');
+    // Name fields
+    const firstName = document.getElementById('first_name');
+    const middleName = document.getElementById('middle_name');
+    const lastName = document.getElementById('last_name');
+    
+    // Other fields
     const email = document.getElementById('email');
     const password = document.getElementById('password');
 
-    if (!fullname.value.trim()) {
-        fullname.classList.add('is-invalid');
+    if (!firstName.value.trim()) {
+        firstName.classList.add('is-invalid');
         isValid = false;
     } else {
-        fullname.classList.remove('is-invalid');
+        firstName.classList.remove('is-invalid');
+    }
+
+    if (!lastName.value.trim()) {
+        lastName.classList.add('is-invalid');
+        isValid = false;
+    } else {
+        lastName.classList.remove('is-invalid');
     }
 
     if (!validateEmail(email.value)) {
