@@ -453,10 +453,8 @@
                                                                                     <i class="bi bi-calendar-check me-1"></i>Scheduled
                                                                                 </button>
                                                                             @else
-<button type="button" class="btn btn-sm btn-primary btn-schedule-interview" 
-                                                                                        data-app-id="{{ $application->id }}" 
-                                                                                        data-applicant-name="{{ $applicantName }}"
-                                                                                        data-job-title="{{ $job->title }}">
+                                                                                <button type="button" class="btn btn-sm btn-primary btn-interview" 
+                                                                                        data-application-id="{{ $application->id }}">
                                                                                     <i class="bi bi-calendar-plus me-1"></i>Interview
                                                                                 </button>
                                                                             @endif
@@ -629,45 +627,7 @@
         </div>
     </div>
 
-    <!-- Interview Schedule Modal -->
-    <div class="modal fade" id="interviewModal" tabindex="-1" aria-labelledby="interviewModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="interviewModalLabel">Schedule Interview</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="interviewForm">
-                        <input type="hidden" id="applicationId" name="application_id">
-                        
-                        <div class="mb-3">
-                            <label for="scheduledAt" class="form-label">Interview Date & Time</label>
-                            <input type="datetime-local" class="form-control" id="scheduledAt" name="scheduled_at" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="interviewType" class="form-label">Interview Type</label>
-                            <select class="form-select" id="interviewType" name="interview_type" required>
-                                <option value="">Select type...</option>
-                                <option value="online">Online</option>
-                                <option value="physical">Physical</option>
-                            </select>
-                        </div>
-
-                        <div class="alert alert-info" id="letterPreview" style="display: none;">
-                            <strong>Interview Letter Preview:</strong>
-                            <p id="letterText" class="mt-2"></p>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="scheduleBtn">Schedule Interview</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    @include('components.interview-modal')
 
         <!-- Application modal (legacy-like) -->
         <div class="modal fade" id="applicationModal" tabindex="-1" aria-labelledby="applicationModalLabel" aria-hidden="true">
@@ -729,68 +689,6 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="button" class="btn btn-primary" id="modalSubmitBtn">SUBMIT APPLICATION</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Interview Scheduling Modal -->
-        <div class="modal fade" id="interviewModal" tabindex="-1" aria-labelledby="interviewModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="interviewModalLabel">Schedule Interview</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="interviewScheduleForm">
-                            <input type="hidden" id="interviewAppId" name="application_id">
-                            <div class="mb-3">
-                                <label for="interviewApplicantName" class="form-label">Applicant</label>
-                                <input type="text" id="interviewApplicantName" class="form-control" readonly>
-                            </div>
-                            <div class="mb-3">
-                                <label for="interviewJobTitle" class="form-label">Job Position</label>
-                                <input type="text" id="interviewJobTitle" class="form-control" readonly>
-                            </div>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="interviewDate" class="form-label">Date <span class="text-danger">*</span></label>
-                                    <input type="date" class="form-control" id="interviewDate" name="interview_date" required min="{{ date('Y-m-d', strtotime('+1 day')) }}">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="interviewTime" class="form-label">Time <span class="text-danger">*</span></label>
-                                    <input type="time" class="form-control" id="interviewTime" name="interview_time" required>
-                                </div>
-                            </div>
-                            <div class="mb-3 mt-3">
-                                <label class="form-label">Interview Type <span class="text-danger">*</span></label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="interview_type" id="interviewTypeOnline" value="Online" required>
-                                    <label class="form-check-label" for="interviewTypeOnline">
-                                        Online
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="interview_type" id="interviewTypePhysical" value="Physical" required>
-                                    <label class="form-check-label" for="interviewTypePhysical">
-                                        Physical
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="mb-3" id="interviewLocationWrap" style="display: none;">
-                                <label for="interviewLocation" class="form-label">Location <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="interviewLocation" name="interview_location" placeholder="Enter interview location">
-                            </div>
-                            <div class="alert alert-info mt-3 mb-0">
-                                <strong>Preview:</strong><br>
-                                <span id="interviewPreview">Hi! We would like to interview you...</span>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-primary" id="interviewSubmitBtn">Schedule Interview</button>
                     </div>
                 </div>
             </div>
